@@ -424,13 +424,13 @@ SCREENS.push({title:'Network Map', render: el => {
             o:COORDS[l.o], d:COORDS[l.d], progress:rnd(),
             speed:0.00018+rnd()*0.00018, pro:'999'+(10000000+rndInt(10,99999))};
   });
-  /* ocean shipments · long-haul container moves */
+  /* ocean shipments · per-customer container batches at FBX rates */
   const SHIPS = [
-    {name:'MSC AURORA',     from:[-118.27,33.74], to:[121.47,31.23], teu:8400, billed:1240000, fbx:'$2,180/40ft', lane:'TPEB',  progress:rnd()},
-    {name:'EVERGREEN PEARL',from:[121.47,31.23],  to:[-118.27,33.74],teu:9200, billed:1380000, fbx:'$2,180/40ft', lane:'TPWB',  progress:rnd()},
-    {name:'MAERSK HANOVER', from:[-74.04,40.69],  to:[4.48,51.92],   teu:6200, billed:780000,  fbx:'$1,720/40ft', lane:'TANB',  progress:rnd()},
-    {name:'CMA TRIBECA',    from:[-95.27,29.74],  to:[103.82,1.35],  teu:5800, billed:920000,  fbx:'$2,460/40ft', lane:'USG-SE',progress:rnd()},
-    {name:'COSCO MARLIN',   from:[103.82,1.35],   to:[-95.27,29.74], teu:7100, billed:1080000, fbx:'$2,460/40ft', lane:'SE-USG',progress:rnd()},
+    {name:'MSC AURORA',     from:[-118.27,33.74], to:[121.47,31.23], teu:60,  billed:65400,  fbx:'$2,180/40ft', lane:'TPEB',  progress:rnd()},
+    {name:'EVERGREEN PEARL',from:[121.47,31.23],  to:[-118.27,33.74],teu:80,  billed:87200,  fbx:'$2,180/40ft', lane:'TPWB',  progress:rnd()},
+    {name:'MAERSK HANOVER', from:[-74.04,40.69],  to:[4.48,51.92],   teu:50,  billed:43000,  fbx:'$1,720/40ft', lane:'TANB',  progress:rnd()},
+    {name:'CMA TRIBECA',    from:[-95.27,29.74],  to:[103.82,1.35],  teu:70,  billed:86100,  fbx:'$2,460/40ft', lane:'USG-SE',progress:rnd()},
+    {name:'COSCO MARLIN',   from:[103.82,1.35],   to:[-95.27,29.74], teu:60,  billed:73800,  fbx:'$2,460/40ft', lane:'SE-USG',progress:rnd()},
   ];
   SHIPS.forEach(s=>{ s.speed = 0.00004 + rnd()*0.00003; });
   /* major ports · congestion via BTS public data, cached */
