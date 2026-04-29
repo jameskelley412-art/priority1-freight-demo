@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Priority1 — API Demo</title>
+<title>Priority1 — Procurement Command</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#fafaf9; --card:#ffffff; --ink:#09090b; --muted:#71717a;
@@ -18,47 +20,39 @@
   html,body{margin:0;padding:0;height:100%;background:var(--bg)}
   body{font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased}
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-
-  .topbar{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,250,249,.78);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,250,249,.78);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:14px}
   .mark{width:26px;height:26px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;letter-spacing:-.02em}
   .crumb{color:var(--muted);font-size:13px;font-weight:500;display:none}
   .crumb b{color:var(--ink)}
   @media(min-width:640px){.crumb{display:inline}}
   .dots{display:flex;gap:5px}
-  .dot{width:6px;height:6px;border-radius:999px;background:#d4d4d8;transition:all .25s}
+  .dot{width:6px;height:6px;border-radius:999px;background:#d4d4d8;transition:all .25s;cursor:pointer}
   .dot.on{width:22px;background:var(--accent)}
-
   .car{display:flex;flex-direction:row;width:100vw;height:100vh;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
   .car::-webkit-scrollbar{display:none}
-  .scr{flex:0 0 100vw;width:100vw;height:100vh;scroll-snap-align:start;scroll-snap-stop:always;padding:80px 20px 64px;overflow-y:auto;overflow-x:hidden}
-  @media(min-width:768px){.scr{padding:96px 56px 80px}}
-
+  .scr{flex:0 0 100vw;width:100vw;height:100vh;scroll-snap-align:start;scroll-snap-stop:always;padding:74px 20px 56px;overflow-y:auto;overflow-x:hidden}
+  @media(min-width:768px){.scr{padding:88px 56px 72px}}
   .arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:40;width:42px;height:62px;border-radius:14px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;user-select:none;box-shadow:0 6px 20px rgba(0,0,0,.06);transition:all .15s;color:var(--ink)}
   .arrow:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
   .arrow.l{left:14px}.arrow.r{right:14px}
   .arrow svg{width:20px;height:20px}
-  .arrow[disabled]{opacity:.25;cursor:default;pointer-events:none}
-
-  .hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:40;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:11px}
+  .hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:40;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:11px}
   .kbd{padding:2px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--muted);font-size:11px}
-
   .h1{font-size:26px;font-weight:700;letter-spacing:-.025em;margin:0 0 4px}
   @media(min-width:768px){.h1{font-size:30px}}
-  .sub{color:var(--muted);font-size:14px;margin:0 0 22px;max-width:680px}
-
+  .sub{color:var(--muted);font-size:14px;margin:0 0 20px;max-width:720px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-  .card-lg{padding:24px}
-
+  .card-lg{padding:22px}
   .lab{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   .num-xl{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+  @media(min-width:1280px){.num-xl{font-size:34px}}
   .num-lg{font-size:20px;font-weight:700;letter-spacing:-.01em}
   .num-md{font-size:15px;font-weight:600}
   .delta-up{color:var(--bad);font-weight:600;font-size:12px}
   .delta-dn{color:var(--good);font-weight:600;font-size:12px}
   .delta-flat{color:var(--muted);font-weight:600;font-size:12px}
-
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.4}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.4;white-space:nowrap}
   .pill-ok{background:#dcfce7;color:#166534}
   .pill-warn{background:#fef3c7;color:#92400e}
   .pill-bad{background:#fee2e2;color:#991b1b}
@@ -67,7 +61,6 @@
   .pill-live{background:#dcfce7;color:#166534}
   .pill-live::before{content:'';width:6px;height:6px;border-radius:999px;background:#16a34a;display:inline-block;animation:pulse 1.6s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 7px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
-
   .grid{display:grid;gap:14px;grid-template-columns:1fr}
   @media(min-width:768px){
     .g2{grid-template-columns:1fr 1fr}
@@ -76,74 +69,44 @@
     .g-2-1{grid-template-columns:2fr 1fr}
     .g-1-2{grid-template-columns:1fr 2fr}
   }
-
   .row{display:flex;align-items:center;gap:10px}
   .between{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .between-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-  .stack-xs > *+*{margin-top:4px}
   .stack > *+*{margin-top:10px}
   .stack-lg > *+*{margin-top:18px}
-
   .div{height:1px;background:var(--line);margin:14px 0}
   .divide > *+*{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
-
   .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:500;color:var(--ink);background:#fff;cursor:pointer;user-select:none;transition:all .12s}
   .chip:hover{border-color:#a1a1aa}
   .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .chip .x{color:var(--accent);font-weight:700}
   .chip.on .x{color:#fdba74}
-
   .input,.select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink)}
   .input:focus,.select:focus{outline:none;border-color:var(--ink)}
   .field-lab{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block}
-
-  .btn{padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid transparent;transition:all .12s;font-family:inherit}
+  .btn{padding:9px 14px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;border:1px solid transparent;transition:all .12s;font-family:inherit;white-space:nowrap}
   .btn-pri{background:var(--ink);color:#fff}
   .btn-pri:hover{background:#27272a}
   .btn-out{background:#fff;color:var(--ink);border-color:var(--line)}
   .btn-out:hover{border-color:var(--ink)}
-
   table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:10px 10px;border-bottom:1px solid var(--line)}
+  th{text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:10px 10px;border-bottom:1px solid var(--line);background:#fafafa}
   td{padding:13px 10px;border-bottom:1px solid var(--line2)}
   tr:last-child td{border-bottom:0}
   tr.row-hover:hover td{background:#fafafa}
-
   .bar{height:8px;border-radius:999px;background:#f4f4f5;overflow:hidden}
   .bar > span{display:block;height:100%;border-radius:999px}
-
-  .tl{position:relative;padding-left:26px}
-  .tl::before{content:'';position:absolute;left:8px;top:6px;bottom:8px;width:2px;background:var(--line)}
-  .tl-i{position:relative;padding-bottom:18px}
-  .tl-i::before{content:'';position:absolute;left:-22px;top:5px;width:14px;height:14px;border-radius:999px;background:#fff;border:2px solid var(--line)}
-  .tl-i.done::before{background:#16a34a;border-color:#16a34a}
-  .tl-i.now::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px rgba(234,88,12,.18)}
-  .tl-time{font-size:11px;color:var(--muted);font-weight:500}
-  .tl-where{font-size:13px;color:var(--ink);font-weight:600;margin-top:1px}
-  .tl-event{font-size:12px;color:var(--muted)}
-
   .legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
-
   .stack-h{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-  .stack-h::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block}
-
-  .mini-bar{display:flex;align-items:flex-end;gap:3px;height:36px}
-  .mini-bar > div{flex:1;background:#e4e4e7;border-radius:2px;min-height:2px}
-  .mini-bar > div.on{background:var(--ink)}
-
-  .seg-bar{display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
-  .seg-bar > div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
-
-  .doc-thumb{width:46px;height:60px;border-radius:6px;background:linear-gradient(180deg,#f4f4f5,#e4e4e7);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:600;flex-shrink:0}
-  .doc-thumb.bol{background:linear-gradient(180deg,#fff7ed,#fed7aa);color:#9a3412;border-color:#fed7aa}
-  .doc-thumb.pod{background:linear-gradient(180deg,#f0fdf4,#bbf7d0);color:#166534;border-color:#bbf7d0}
-  .doc-thumb.inv{background:linear-gradient(180deg,#eff6ff,#bfdbfe);color:#1e40af;border-color:#bfdbfe}
-
-  .corner-controls{display:flex;gap:6px;flex-wrap:wrap}
-  .corner-controls .chip{padding:5px 10px;font-size:12px}
-
-  .source-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:500}
+  .stack-h::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}
+  .source-tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);font-weight:500}
   .source-tag b{color:var(--ink);font-weight:600}
+  .alert-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:10px}
+  .alert-row.bad{border-color:#fecaca;background:#fef2f2}
+  .alert-row.warn{border-color:#fde68a;background:#fffbeb}
+  .alert-row.ok{border-color:#bbf7d0;background:#f0fdf4}
+  .spark{display:flex;align-items:flex-end;gap:1.5px;height:22px;width:60px}
+  .spark > div{flex:1;border-radius:1px;min-height:1px}
 </style>
 </head>
 <body>
@@ -151,8 +114,8 @@
 <div class="topbar">
   <div class="brand">
     <span class="mark">P1</span>
-    <span>Priority1 API</span>
-    <span class="crumb">·  <b id="crumb">Quote</b></span>
+    <span>Procurement Command</span>
+    <span class="crumb">·  <b id="crumb"></b></span>
   </div>
   <div class="dots" id="dots"></div>
 </div>
@@ -168,7 +131,7 @@
 
 <div class="hint">
   <span class="kbd">←</span><span class="kbd">→</span>
-  <span id="pageNum">1 / 12</span>
+  <span id="pageNum"></span>
 </div>
 
 <script>
@@ -177,16 +140,17 @@ const NOW = new Date();
 const $ = (id)=>document.getElementById(id);
 const fmt$ = n => '$' + (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmt$0 = n => '$' + Math.round(n).toLocaleString('en-US');
+const fmt$M = n => '$' + (n/1000000).toFixed(1) + 'M';
+const fmt$K = n => '$' + (n/1000).toFixed(0) + 'k';
 const pct = (n,p=1) => (n>=0?'+':'') + n.toFixed(p) + '%';
 function ago(d){const ms=NOW-d;const m=Math.round(ms/60000);if(m<1)return'just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<24)return h+' hr ago';const days=Math.round(h/24);return days+'d ago';}
 function fmtTime(d){return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
-function fmtDate(d){return d.toLocaleString('en-US',{month:'short',day:'numeric'});}
-let SEED = 73; function rnd(){SEED=(SEED*9301+49297)%233280;return SEED/233280;}
+let SEED=83; function rnd(){SEED=(SEED*9301+49297)%233280;return SEED/233280;}
 function rndInt(a,b){return Math.floor(rnd()*(b-a+1))+a;}
 function pick(a){return a[rndInt(0,a.length-1)];}
 
 /* ---------- reference data ---------- */
-const CARRIERS = [
+const CARRIERS=[
   {code:'ODFL',name:'Old Dominion',color:'#dc2626'},
   {code:'SAIA',name:'Saia',color:'#0891b2'},
   {code:'EXLA',name:'Estes Express',color:'#16a34a'},
@@ -195,7 +159,7 @@ const CARRIERS = [
   {code:'FXFE',name:'FedEx Freight',color:'#db2777'},
   {code:'ABFS',name:'ABF Freight',color:'#0284c7'},
 ];
-const LANES = [
+const LANES=[
   {o:'Memphis, TN',d:'Atlanta, GA',oz:'38103',dz:'30303',mi:384},
   {o:'Chicago, IL',d:'Dallas, TX',oz:'60601',dz:'75201',mi:925},
   {o:'Los Angeles, CA',d:'Phoenix, AZ',oz:'90001',dz:'85001',mi:372},
@@ -207,42 +171,42 @@ const LANES = [
   {o:'Indianapolis, IN',d:'Nashville, TN',oz:'46204',dz:'37203',mi:289},
   {o:'Kansas City, MO',d:'St. Louis, MO',oz:'64101',dz:'63101',mi:248},
 ];
-const ACCS = [
-  {code:'LFTGT_DST',name:'Liftgate Destination',cost:65,group:'Equipment'},
-  {code:'LFTGT_ORG',name:'Liftgate Origin',cost:65,group:'Equipment'},
-  {code:'RES_DST',name:'Residential Delivery',cost:110,group:'Location'},
-  {code:'INSIDE_DEL',name:'Inside Delivery',cost:95,group:'Service'},
-  {code:'GUAR_NOON',name:'Guaranteed by Noon',cost:120,group:'Guaranteed'},
-  {code:'GUAR_5PM',name:'Guaranteed by 5 PM',cost:65,group:'Guaranteed'},
-  {code:'NOTIF_DEL',name:'Notification Required',cost:35,group:'Service'},
-  {code:'APPT_DEL',name:'Appointment Required',cost:45,group:'Service'},
-  {code:'LIM_ACC_CONST',name:'Limited Access · Construction',cost:85,group:'Location'},
-  {code:'LIM_ACC_AIRPORT',name:'Limited Access · Airport',cost:75,group:'Location'},
-  {code:'HAZMAT',name:'Hazardous Material',cost:55,group:'Service'},
-  {code:'EXC_LEN_12',name:'Excessive Length 12-20 ft',cost:175,group:'Equipment'},
+const COORDS={
+  'Memphis, TN':[-90.049,35.149],'Atlanta, GA':[-84.388,33.749],'Chicago, IL':[-87.629,41.878],
+  'Dallas, TX':[-96.797,32.776],'Los Angeles, CA':[-118.243,34.052],'Phoenix, AZ':[-112.074,33.448],
+  'Charlotte, NC':[-80.843,35.227],'Houston, TX':[-95.369,29.760],'Newark, NJ':[-74.172,40.735],
+  'Boston, MA':[-71.058,42.360],'New Orleans, LA':[-90.071,29.951],'Cincinnati, OH':[-84.512,39.103],
+  'Detroit, MI':[-83.045,42.331],'Indianapolis, IN':[-86.158,39.768],'Nashville, TN':[-86.781,36.162],
+  'Kansas City, MO':[-94.578,39.099],'St. Louis, MO':[-90.199,38.627]
+};
+const ACCS=[
+  {code:'LFTGT_DST',name:'Liftgate Destination',cost:65},
+  {code:'LFTGT_ORG',name:'Liftgate Origin',cost:65},
+  {code:'RES_DST',name:'Residential Delivery',cost:110},
+  {code:'INSIDE_DEL',name:'Inside Delivery',cost:95},
+  {code:'GUAR_NOON',name:'Guaranteed by Noon',cost:120},
+  {code:'GUAR_5PM',name:'Guaranteed by 5 PM',cost:65},
+  {code:'NOTIF_DEL',name:'Notification Required',cost:35},
+  {code:'APPT_DEL',name:'Appointment Required',cost:45},
+  {code:'LIM_ACC_CONST',name:'Limited Access · Construction',cost:85},
+  {code:'HAZMAT',name:'Hazardous Material',cost:55},
 ];
 
-/* Cached real public data — live keys to be wired later */
-const EIA_DIESEL = [
-  {wk:'2026-02-09',v:3.781},{wk:'2026-02-16',v:3.812},{wk:'2026-02-23',v:3.854},
-  {wk:'2026-03-02',v:3.881},{wk:'2026-03-09',v:3.844},{wk:'2026-03-16',v:3.792},
-  {wk:'2026-03-23',v:3.768},{wk:'2026-03-30',v:3.741},{wk:'2026-04-06',v:3.773},
-  {wk:'2026-04-13',v:3.825},{wk:'2026-04-20',v:3.864},{wk:'2026-04-27',v:3.911},
+/* Cached real public data — live keys wire later */
+const EIA_DIESEL=[
+  {wk:'02-09',v:3.781},{wk:'02-16',v:3.812},{wk:'02-23',v:3.854},
+  {wk:'03-02',v:3.881},{wk:'03-09',v:3.844},{wk:'03-16',v:3.792},
+  {wk:'03-23',v:3.768},{wk:'03-30',v:3.741},{wk:'04-06',v:3.773},
+  {wk:'04-13',v:3.825},{wk:'04-20',v:3.864},{wk:'04-27',v:3.911},
 ];
-const BLS_PPI = [
-  {m:'2025-05',v:137.4},{m:'2025-06',v:137.9},{m:'2025-07',v:138.6},
-  {m:'2025-08',v:139.1},{m:'2025-09',v:139.8},{m:'2025-10',v:140.2},
-  {m:'2025-11',v:140.5},{m:'2025-12',v:141.0},{m:'2026-01',v:141.4},
-  {m:'2026-02',v:142.0},{m:'2026-03',v:142.8},{m:'2026-04',v:143.4},
-];
-const FRED_TRUCK = [ /* real series: PPI long-distance trucking, plausible cached */
-  {m:'2025-05',v:128.1},{m:'2025-06',v:128.9},{m:'2025-07',v:129.4},
-  {m:'2025-08',v:129.8},{m:'2025-09',v:130.5},{m:'2025-10',v:131.1},
-  {m:'2025-11',v:131.6},{m:'2025-12',v:132.2},{m:'2026-01',v:132.8},
-  {m:'2026-02',v:133.5},{m:'2026-03',v:134.2},{m:'2026-04',v:134.9},
+const BLS_PPI=[
+  {m:'May',v:137.4},{m:'Jun',v:137.9},{m:'Jul',v:138.6},
+  {m:'Aug',v:139.1},{m:'Sep',v:139.8},{m:'Oct',v:140.2},
+  {m:'Nov',v:140.5},{m:'Dec',v:141.0},{m:'Jan',v:141.4},
+  {m:'Feb',v:142.0},{m:'Mar',v:142.8},{m:'Apr',v:143.4},
 ];
 
-/* ---------- shipment generator ---------- */
+/* shipment generator */
 function genShipment(idx){
   const lane=pick(LANES); const carrier=pick(CARRIERS);
   const weight=rndInt(450,4400);
@@ -258,17 +222,358 @@ function genShipment(idx){
   const ts=new Date(NOW.getTime()-rndInt(2,30*24*60)*60000);
   return {id:'P1-'+(1830472+idx),pro:'999'+(10000000+idx),lane,carrier,weight,cls,linehaul,fuel,accessorials:accs,accTotal,total,ts};
 }
-const SHIPMENTS = Array.from({length:60},(_,i)=>genShipment(i));
+const SHIPMENTS=Array.from({length:60},(_,i)=>genShipment(i));
 
-/* ---------- screens ---------- */
-const SCREENS = [];
+const SCREENS=[];
 
-/* 1 — Quote */
+/* ============ 1 · COMMAND CENTER ============ */
+SCREENS.push({title:'Command Center', render: el => {
+  const ytd=22480000, mtd=5840000;
+  const spendSpark=[4.8,5.0,5.2,5.1,5.4,5.3,5.6,5.5,5.7,5.6,5.8,5.84];
+  const otpSpark=[89.2,90.1,91.0,90.5,91.8,91.3,92.0,92.1,91.7,92.2,92.3,92.4];
+  const leakSpark=[42,38,45,52,41,39,44,40,42,38,40,38];
+  const savSpark=[110,118,125,128,131,135,138,140,141,142,142,142];
+  const inTransit=10, inTransitValue=384000;
+  const exceptions=7, leakMTD=38400, savingsMTD=142000;
+  const onTime=92.4;
+  const alerts=[
+    {sev:'bad',t:'XPO running 14% above market on Memphis–Atlanta',a:'Re-tender lane'},
+    {sev:'warn',t:'Cargo theft alert · Ontario, CA in last 24h',a:'Reroute or escort'},
+    {sev:'warn',t:'2 invoices billed accessorials not on quote',a:'Dispute · $385'},
+    {sev:'ok',t:'Diesel down 1.2% week-over-week',a:'Hold surcharge talks'},
+  ];
+  const sparkHTML=(arr,color)=>{const max=Math.max(...arr);return `<div class="spark">${arr.map(v=>`<div style="background:${color};opacity:${0.35+v/max*0.65};height:${(v/max*100).toFixed(0)}%;"></div>`).join('')}</div>`};
+  const KPI=(lab,big,sub,spark,color)=>`
+    <div class="card">
+      <div class="between"><span class="lab">${lab}</span>${sparkHTML(spark,color||'#09090b')}</div>
+      <div class="num-xl mono" style="margin-top:8px;">${big}</div>
+      <div style="margin-top:2px;font-size:12px;color:var(--muted);font-weight:500;">${sub}</div>
+    </div>`;
+  el.innerHTML=`
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Command Center</h1><span class="pill pill-live">Live · ${ago(new Date(NOW.getTime()-120000))}</span></div>
+    <p class="sub">Your morning briefing for $250M outbound. Spend, performance, leverage, and what needs you today.</p>
+    <div class="grid g4" style="margin-bottom:14px;">
+      ${KPI('Spend MTD',fmt$0(mtd),'Run-rate $69.5M annual',spendSpark)}
+      ${KPI('On-time delivery',onTime.toFixed(1)+'%','+1.1pt vs LM',otpSpark,'#16a34a')}
+      ${KPI('Savings vs market',fmt$0(savingsMTD),'2.4% under index',savSpark,'#16a34a')}
+      ${KPI('Accessorial leak',fmt$0(leakMTD),'Recoverable',leakSpark,'#dc2626')}
+    </div>
+    <div class="grid g-2-1">
+      <div class="card card-lg">
+        <div class="stack-h">Needs your attention today</div>
+        <div class="stack">
+          ${alerts.map(a=>`
+            <div class="alert-row ${a.sev}">
+              <div style="flex:1;min-width:0;">
+                <div class="row" style="gap:8px;flex-wrap:wrap;">
+                  <span class="pill ${a.sev==='bad'?'pill-bad':a.sev==='warn'?'pill-warn':'pill-ok'}">${a.sev==='bad'?'High':a.sev==='warn'?'Watch':'Note'}</span>
+                  <span style="font-weight:600;font-size:13.5px;">${a.t}</span>
+                </div>
+              </div>
+              <button class="btn btn-out">${a.a} →</button>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <span class="lab">In transit right now</span>
+          <div class="num-xl mono" style="margin-top:4px;">${inTransit}</div>
+          <div style="margin-top:6px;font-size:12px;color:var(--muted);">Total billed <b class="mono" style="color:var(--ink);">${fmt$0(inTransitValue)}</b></div>
+        </div>
+        <div class="card">
+          <span class="lab">Open exceptions</span>
+          <div class="num-xl mono" style="margin-top:4px;color:${exceptions>5?'var(--bad)':exceptions>2?'var(--warn)':'var(--good)'};">${exceptions}</div>
+          <div class="row" style="margin-top:6px;font-size:12px;color:var(--muted);gap:10px;">
+            <span>3 late</span><span>2 over-billed</span><span>2 off-route</span>
+          </div>
+        </div>
+        <div class="card">
+          <span class="lab">Risk radar</span>
+          <div class="stack" style="margin-top:8px;">
+            <div class="between" style="font-size:13px;"><span>Weather</span><span class="pill pill-warn">2 alerts</span></div>
+            <div class="between" style="font-size:13px;"><span>Cargo theft</span><span class="pill pill-bad">High · CA</span></div>
+            <div class="between" style="font-size:13px;"><span>Fuel</span><span class="pill pill-ok">-1.2% wk</span></div>
+            <div class="between" style="font-size:13px;"><span>Capacity</span><span class="pill pill-ok">Loose</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}});
+
+/* ============ 2 · NETWORK MAP ============ */
+SCREENS.push({title:'Network Map', render: el => {
+  const TRUCKS = LANES.map((l,i)=>{
+    const carrier = CARRIERS[i % CARRIERS.length];
+    const billed = Math.round(l.mi*1.85 + 220 + rnd()*180);
+    const cost = Math.round(billed * (0.78 + rnd()*0.10));
+    const margin = billed - cost;
+    const marginPct = margin/billed*100;
+    const flag = i===2 ? 'theft' : (i===5 ? 'late' : (i===7 ? 'weather' : null));
+    return {lane:l, carrier, billed, cost, margin, marginPct, flag,
+            o:COORDS[l.o], d:COORDS[l.d], progress:rnd(),
+            speed:0.00018+rnd()*0.00018, pro:'999'+(10000000+rndInt(10,99999))};
+  });
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Network Map</h1><span class="pill pill-live">${TRUCKS.length} in transit</span></div>
+    <p class="sub">Every active shipment with billed rate and margin per truck. Risk flags overlay theft hotspots, weather, and exceptions.</p>
+    <div class="grid g4" style="margin-bottom:14px;">
+      <div class="card"><span class="lab">In transit</span><div class="num-xl mono">${TRUCKS.length}</div></div>
+      <div class="card"><span class="lab">Total billed</span><div class="num-xl mono">${fmt$0(TRUCKS.reduce((s,t)=>s+t.billed,0))}</div></div>
+      <div class="card"><span class="lab">Total margin</span><div class="num-xl mono" style="color:var(--good);">${fmt$0(TRUCKS.reduce((s,t)=>s+t.margin,0))}</div></div>
+      <div class="card"><span class="lab">Avg margin %</span><div class="num-xl mono">${(TRUCKS.reduce((s,t)=>s+t.marginPct,0)/TRUCKS.length).toFixed(1)}%</div></div>
+    </div>
+    <div class="card card-lg" style="padding:14px;">
+      <div id="mapWrap" style="position:relative;width:100%;height:58vh;min-height:360px;"></div>
+      <div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px;">
+        <div class="row" style="gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;">
+          <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#09090b;border-radius:999px;"></span>City</span>
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:18px;height:3px;background:#d4d4d8;border-radius:999px;"></span>Lane</span>
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#ea580c;border-radius:2px;"></span>Truck</span>
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#dc2626;border-radius:2px;"></span>Flagged</span>
+        </div>
+        <span class="source-tag">Geometry · <b>us-atlas</b> · <b>d3 albersUsa</b></span>
+      </div>
+    </div>
+  `;
+  const wrap = el.querySelector('#mapWrap');
+  const draw=()=>{
+    const W=wrap.clientWidth, H=wrap.clientHeight;
+    if(W<50||H<50){setTimeout(draw,80);return;}
+    wrap.innerHTML='';
+    const svg=d3.select(wrap).append('svg').attr('width',W).attr('height',H).style('display','block');
+    const proj=d3.geoAlbersUsa();
+    const path=d3.geoPath(proj);
+    d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(us=>{
+      const states=topojson.feature(us,us.objects.states);
+      proj.fitSize([W-20,H-30],states).translate([W/2,H/2]);
+      svg.append('g').selectAll('path').data(states.features).join('path').attr('d',path)
+        .attr('fill','#fafafa').attr('stroke','#e4e4e7').attr('stroke-width',0.7);
+      svg.append('path').datum(topojson.mesh(us,us.objects.states,(a,b)=>a!==b))
+        .attr('d',path).attr('fill','none').attr('stroke','#d4d4d8').attr('stroke-width',0.5);
+      // theft hotspot blob (Ontario, CA area)
+      const onp = proj([-117.65, 34.064]);
+      if(onp){
+        svg.append('circle').attr('cx',onp[0]).attr('cy',onp[1]).attr('r',24).attr('fill','#dc2626').attr('opacity',0.12);
+        svg.append('circle').attr('cx',onp[0]).attr('cy',onp[1]).attr('r',10).attr('fill','#dc2626').attr('opacity',0.25);
+      }
+      // weather blob (I-40 Memphis-Nashville)
+      const wp = proj([-88.2, 35.7]);
+      if(wp){
+        svg.append('circle').attr('cx',wp[0]).attr('cy',wp[1]).attr('r',32).attr('fill','#0891b2').attr('opacity',0.10);
+      }
+      TRUCKS.forEach(t=>{
+        t.op=proj(t.o); t.dp=proj(t.d);
+        if(!t.op||!t.dp)return;
+        const mx=(t.op[0]+t.dp[0])/2, my=(t.op[1]+t.dp[1])/2;
+        const dx=t.dp[0]-t.op[0], dy=t.dp[1]-t.op[1];
+        const len=Math.sqrt(dx*dx+dy*dy);
+        t.cp=[mx+(-dy/len)*Math.min(60,len*0.18), my+(dx/len)*Math.min(60,len*0.18)];
+      });
+      const laneG=svg.append('g');
+      TRUCKS.forEach(t=>{if(!t.op||!t.dp)return;
+        laneG.append('path')
+          .attr('d',`M${t.op[0]},${t.op[1]} Q${t.cp[0]},${t.cp[1]} ${t.dp[0]},${t.dp[1]}`)
+          .attr('fill','none').attr('stroke',t.flag?'#dc2626':'#d4d4d8').attr('stroke-width',1).attr('stroke-dasharray','3 4').attr('opacity',t.flag?0.55:1);
+      });
+      const cityG=svg.append('g');
+      const allCities=new Set(); TRUCKS.forEach(t=>{allCities.add(t.lane.o);allCities.add(t.lane.d);});
+      [...allCities].forEach(c=>{
+        const p=proj(COORDS[c]); if(!p)return;
+        cityG.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',3.5).attr('fill','#09090b').attr('stroke','#fff').attr('stroke-width',1.5);
+        cityG.append('text').attr('x',p[0]+7).attr('y',p[1]+3).attr('font-size',10).attr('font-weight',600).attr('fill','#3f3f46').attr('font-family','Inter').text(c.split(',')[0]);
+      });
+      const truckG=svg.append('g'); const labelG=svg.append('g');
+      TRUCKS.forEach(t=>{
+        t.tEl=truckG.append('g');
+        t.tEl.append('rect').attr('width',16).attr('height',10).attr('x',-8).attr('y',-5).attr('rx',2).attr('fill',t.flag?'#dc2626':'#ea580c').attr('stroke','#fff').attr('stroke-width',1.5);
+        t.lEl=labelG.append('g').style('pointer-events','none');
+        const bg=t.lEl.append('rect').attr('rx',5).attr('fill','#09090b').attr('stroke','#27272a');
+        const tt1=t.lEl.append('text').attr('font-size',10).attr('font-weight',700).attr('fill','#fff').attr('font-family','JetBrains Mono');
+        const tt2=t.lEl.append('text').attr('font-size',9).attr('font-weight',600).attr('fill',t.flag?'#fca5a5':'#86efac').attr('font-family','JetBrains Mono');
+        tt1.text(fmt$0(t.billed));
+        tt2.text(t.flag?(t.flag==='theft'?'theft zone':t.flag==='late'?'late 4h':'weather'):`+${fmt$0(t.margin)} · ${t.marginPct.toFixed(0)}%`);
+        const w1=tt1.node().getComputedTextLength(); const w2=tt2.node().getComputedTextLength();
+        const w=Math.max(w1,w2)+12;
+        bg.attr('width',w).attr('height',26).attr('x',-w/2).attr('y',-32);
+        tt1.attr('text-anchor','middle').attr('y',-21);
+        tt2.attr('text-anchor','middle').attr('y',-9);
+      });
+      function pos(t){const p=t.progress,u=1-p;
+        const x=u*u*t.op[0]+2*u*p*t.cp[0]+p*p*t.dp[0];
+        const y=u*u*t.op[1]+2*u*p*t.cp[1]+p*p*t.dp[1];
+        const tx=2*u*(t.cp[0]-t.op[0])+2*p*(t.dp[0]-t.cp[0]);
+        const ty=2*u*(t.cp[1]-t.op[1])+2*p*(t.dp[1]-t.cp[1]);
+        return {x,y,ang:Math.atan2(ty,tx)*180/Math.PI};
+      }
+      let lastT=performance.now();
+      function frame(now){const dt=now-lastT; lastT=now;
+        TRUCKS.forEach(t=>{if(!t.tEl)return;
+          t.progress+=t.speed*dt;
+          if(t.progress>=1.05) t.progress=-0.05;
+          const {x,y,ang}=pos(t);
+          t.tEl.attr('transform',`translate(${x},${y}) rotate(${ang})`);
+          t.lEl.attr('transform',`translate(${x},${y})`);
+        });
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }).catch(()=>{wrap.innerHTML='<div class="card" style="background:#fef2f2;color:#991b1b;">Map data failed to load. Refresh.</div>';});
+  };
+  setTimeout(draw,60);
+}});
+
+/* ============ 3 · SPEND PULSE ============ */
+SCREENS.push({title:'Spend Pulse', render: el => {
+  const months=BLS_PPI.map(b=>b.m);
+  const spend=[3920,4180,4380,4290,4510,4630,4720,4880,4810,4990,5240,5840].map(v=>v*1000);
+  const budget=Array(12).fill(4500*1000);
+  const blsV=BLS_PPI.map(b=>b.v);
+  const eiaV=EIA_DIESEL.map(d=>d.v);
+  const wins=[
+    {l:'Memphis → Atlanta',d:-7.2,$:18400},
+    {l:'Newark → Boston',d:-5.8,$:11200},
+    {l:'Dallas → Houston',d:-4.1,$:7800},
+  ];
+  const leaks=[
+    {l:'Chicago → Dallas',d:11.4,$:24600},
+    {l:'LA → Phoenix',d:6.9,$:9700},
+    {l:'Atlanta → Charlotte',d:4.2,$:4100},
+  ];
+  el.innerHTML=`
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Spend Pulse</h1><span class="pill pill-soft">Trailing 12 months</span></div>
+    <p class="sub">Where the money goes, where it leaks, where you win. Internal spend over public BLS trucking PPI and EIA diesel.</p>
+    <div class="grid g4" style="margin-bottom:14px;">
+      <div class="card"><span class="lab">Spend YTD</span><div class="num-xl mono">${fmt$M(22480000)}</div><div class="delta-up">+8.2% vs LY</div></div>
+      <div class="card"><span class="lab">vs Budget MTD</span><div class="num-xl mono delta-dn">-${fmt$0(140000).slice(1)}</div><div class="lab" style="margin-top:2px;">2.4% under</div></div>
+      <div class="card"><span class="lab">vs Market</span><div class="num-xl mono delta-dn">-1.7%</div><div class="lab" style="margin-top:2px;">below BLS PPI</div></div>
+      <div class="card"><span class="lab">Run-rate</span><div class="num-xl mono">${fmt$M(70080000)}</div><div class="lab" style="margin-top:2px;">annualized</div></div>
+    </div>
+    <div class="grid g-2-1">
+      <div class="card card-lg"><div class="stack-h">Spend vs budget</div><canvas id="sp1" height="120"></canvas></div>
+      <div class="card card-lg"><div class="stack-h">EIA diesel · weekly</div><canvas id="sp2" height="120"></canvas></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px;">
+      <div class="card">
+        <div class="stack-h" style="color:var(--good);">Top wins · paid below market</div>
+        <div class="divide" style="margin-top:8px;">
+          ${wins.map(w=>`<div class="between"><div><div class="num-md">${w.l}</div><div class="lab">savings ${fmt$0(w.$)}/mo</div></div><span class="delta-dn mono">${pct(w.d,1)}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="stack-h" style="color:var(--bad);">Top leaks · paid above market</div>
+        <div class="divide" style="margin-top:8px;">
+          ${leaks.map(w=>`<div class="between"><div><div class="num-md">${w.l}</div><div class="lab">exposure ${fmt$0(w.$)}/mo</div></div><span class="delta-up mono">${pct(w.d,1)}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="source-tag" style="margin-top:14px;">Sources · <b>BLS Public Data API</b> trucking PPI · <b>EIA.gov v2</b> weekly retail · cached, live keys wire later</div>
+  `;
+  setTimeout(()=>{
+    new Chart(el.querySelector('#sp1'),{data:{labels:months,datasets:[
+      {type:'bar',label:'Spend',data:spend,backgroundColor:'#09090b',borderRadius:4},
+      {type:'line',label:'Budget',data:budget,borderColor:'#ea580c',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:v=>'$'+(v/1000000).toFixed(1)+'M'},grid:{color:'#f4f4f5'}}}}});
+    new Chart(el.querySelector('#sp2'),{type:'line',data:{labels:EIA_DIESEL.map(d=>d.wk),datasets:[
+      {label:'EIA Diesel ($/gal)',data:eiaV,borderColor:'#09090b',backgroundColor:'#09090b',tension:0.35,borderWidth:2.5,pointRadius:3}
+    ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'$'+v.toFixed(2)},grid:{color:'#f4f4f5'}}}}});
+  },50);
+}});
+
+/* ============ 4 · CARRIER POWER ============ */
+SCREENS.push({title:'Carrier Power', render: el => {
+  const stats=CARRIERS.slice(0,6).map((c,i)=>{
+    const ships=SHIPMENTS.filter(s=>s.carrier.code===c.code);
+    const spend=ships.reduce((s,x)=>s+x.total,0);
+    const otp=88+(i*1.6)+rnd()*4;
+    const claims=+(rnd()*2.4).toFixed(2);
+    const vsMkt=+((rnd()-0.5)*16).toFixed(1);
+    const csa={unsafe:rndInt(15,72),maint:rndInt(12,68)};
+    const oosRate=+(rnd()*22).toFixed(1);
+    const insurance=pick(['Active','Active','Active','Renew 60d']);
+    const mc='MC-'+rndInt(100000,999999);
+    const dot='DOT-'+rndInt(1000000,9999999);
+    return {c,count:ships.length,spend,otp,claims,vsMkt,csa,insurance,mc,dot,oosRate};
+  }).sort((a,b)=>b.spend-a.spend);
+  const totalSpend=stats.reduce((s,x)=>s+x.spend,0);
+  const pressCount=stats.filter(s=>s.vsMkt>5||s.otp<90||s.csa.unsafe>50).length;
+  el.innerHTML=`
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Carrier Power</h1><span class="pill pill-soft">Negotiation leverage board</span></div>
+    <p class="sub">Public OSINT plus our internal performance per carrier. The "press here" board for your next QBR.</p>
+    <div class="grid g3" style="margin-bottom:14px;">
+      <div class="card"><span class="lab">Carriers to press</span><div class="num-xl mono delta-up">${pressCount}</div><div class="lab" style="margin-top:4px;">overpaying or underperforming</div></div>
+      <div class="card"><span class="lab">Top carrier share</span><div class="num-xl mono">${(stats[0].spend/totalSpend*100).toFixed(0)}%</div><div class="lab" style="margin-top:4px;">${stats[0].c.name} · concentration risk</div></div>
+      <div class="card"><span class="lab">FMCSA flags</span><div class="num-xl mono">${stats.filter(s=>s.csa.unsafe>50||s.csa.maint>50).length}</div><div class="lab" style="margin-top:4px;">CSA percentile > 50</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Carrier</th><th>Spend</th><th>vs Market</th><th>On-time</th><th>Claims</th><th>FMCSA CSA</th><th>OOS</th><th>Insurance</th><th>Lever</th></tr></thead>
+        <tbody>${stats.map(s=>{
+          const lever=(s.vsMkt>5||s.otp<90||s.csa.unsafe>50)?'press':(s.vsMkt<-5&&s.otp>92)?'hold':'monitor';
+          return `<tr class="row-hover">
+            <td><div class="row"><span class="legend-dot" style="background:${s.c.color};width:14px;height:14px;"></span><div><b>${s.c.name}</b><div class="lab mono">${s.mc} · ${s.dot}</div></div></div></td>
+            <td class="mono">${fmt$0(s.spend)}<div class="lab">${(s.spend/totalSpend*100).toFixed(0)}% share</div></td>
+            <td class="mono ${s.vsMkt>0?'delta-up':'delta-dn'}">${pct(s.vsMkt,1)}</td>
+            <td><span class="pill ${s.otp>92?'pill-ok':s.otp>88?'pill-warn':'pill-bad'}">${s.otp.toFixed(1)}%</span></td>
+            <td class="mono">${s.claims}%</td>
+            <td><div class="row" style="gap:4px;"><span class="pill ${s.csa.unsafe>50?'pill-bad':s.csa.unsafe>30?'pill-warn':'pill-ok'}" title="Unsafe driving">${s.csa.unsafe}</span><span class="pill ${s.csa.maint>50?'pill-bad':s.csa.maint>30?'pill-warn':'pill-ok'}" title="Maintenance">${s.csa.maint}</span></div></td>
+            <td class="mono">${s.oosRate}%</td>
+            <td>${s.insurance==='Active'?'<span class="pill pill-ok">Active</span>':'<span class="pill pill-warn">Renew 60d</span>'}</td>
+            <td>${lever==='press'?'<span class="pill pill-bad">Press</span>':lever==='hold'?'<span class="pill pill-soft">Hold</span>':'<span class="pill pill-warn">Watch</span>'}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="source-tag" style="margin-top:14px;">Sources · <b>FMCSA SAFER + CSA</b> public scores · <b>BLS</b> trucking PPI · cached for demo, live keys wire later</div>
+  `;
+}});
+
+/* ============ 5 · EXCEPTION QUEUE ============ */
+SCREENS.push({title:'Exception Queue', render: el => {
+  const rows=[];
+  for(let i=0;i<3;i++){const s=SHIPMENTS[i];rows.push({s,kind:'late',sev:'bad',msg:`Late by ${rndInt(2,8)} hr · still in transit`,act:'Escalate carrier'});}
+  for(let i=10;i<13;i++){const s=SHIPMENTS[i];const a=pick(ACCS);rows.push({s,kind:'billing',sev:'warn',msg:`Billed ${a.name} ${fmt$0(a.cost)} not on quote`,act:'Dispute invoice'});}
+  rows.push({s:SHIPMENTS[5],kind:'route',sev:'warn',msg:'Off-route by 47 mi · vendor detour',act:'Confirm with driver'});
+  rows.push({s:SHIPMENTS[8],kind:'route',sev:'warn',msg:'Idle 6h+ at non-stop location',act:'Check with carrier'});
+  rows.push({s:SHIPMENTS[14],kind:'claim',sev:'bad',msg:'Damage claim filed · partial pallet',act:'Open claim'});
+  rows.push({s:SHIPMENTS[2],kind:'fmcsa',sev:'warn',msg:'Carrier CSA unsafe-driving > 60th percentile',act:'Review carrier'});
+  rows.push({s:SHIPMENTS[4],kind:'contract',sev:'warn',msg:'Booked off-contract · ad-hoc rate',act:'Verify rationale'});
+  rows.sort((a,b)=>(a.sev==='bad'?-1:1));
+  const counts={late:rows.filter(r=>r.kind==='late').length,billing:rows.filter(r=>r.kind==='billing').length,route:rows.filter(r=>r.kind==='route').length,claim:rows.filter(r=>r.kind==='claim').length};
+  el.innerHTML=`
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Exception Queue</h1><span class="pill pill-bad">${rows.length} need action</span></div>
+    <p class="sub">Every shipment off plan with the action queued. Clear this list and you save real money this week.</p>
+    <div class="grid g4" style="margin-bottom:14px;">
+      <div class="card"><span class="lab">Late</span><div class="num-xl mono delta-up">${counts.late}</div></div>
+      <div class="card"><span class="lab">Billing dispute</span><div class="num-xl mono">${counts.billing}</div><div class="lab" style="margin-top:2px;">${fmt$0(counts.billing*125)} recoverable</div></div>
+      <div class="card"><span class="lab">Off-route / idle</span><div class="num-xl mono">${counts.route}</div></div>
+      <div class="card"><span class="lab">Claims open</span><div class="num-xl mono">${counts.claim}</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Severity</th><th>Issue</th><th>Shipment</th><th>Lane</th><th>Carrier</th><th>Action</th></tr></thead>
+        <tbody>${rows.map(r=>`
+          <tr class="row-hover">
+            <td><span class="pill ${r.sev==='bad'?'pill-bad':'pill-warn'}">${r.sev==='bad'?'High':'Watch'}</span></td>
+            <td><div style="font-weight:600;font-size:13.5px;">${r.msg}</div><div class="lab mono">${r.kind}</div></td>
+            <td class="mono" style="color:var(--muted);">${r.s.id}</td>
+            <td>${r.s.lane.o.split(',')[0]} → ${r.s.lane.d.split(',')[0]}</td>
+            <td><span style="color:${r.s.carrier.color};font-weight:600;">${r.s.carrier.name}</span></td>
+            <td><button class="btn btn-out">${r.act} →</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}});
+
+/* ============ 6 · QUOTE ============ */
 SCREENS.push({title:'Quote', render: el => {
-  const accState = ACCS.slice(0,8).map(a=>({...a,on:false}));
-  let lane = LANES[0]; let weight=1240; let cls=70;
+  const accState=ACCS.slice(0,8).map(a=>({...a,on:false}));
+  let lane=LANES[0]; let weight=1240; let cls=70;
   function rates(){
-    const accTotal = accState.filter(a=>a.on).reduce((s,a)=>s+a.cost,0);
+    const accTotal=accState.filter(a=>a.on).reduce((s,a)=>s+a.cost,0);
     return CARRIERS.slice(0,5).map((c,i)=>{
       const base=Math.round(lane.mi*(1.0+i*0.06)+weight*0.18);
       const fuel=Math.round(base*0.31);
@@ -276,7 +581,9 @@ SCREENS.push({title:'Quote', render: el => {
     }).sort((a,b)=>a.total-b.total);
   }
   function paint(){
-    const r = rates();
+    const r=rates();
+    const market=Math.round(r[0].total*1.072);
+    el.querySelector('#mktBadge').textContent = `${pct(-((market-r[0].total)/market*100),1)} vs market`;
     el.querySelector('#rates').innerHTML = r.map((x,i)=>`
       <div class="card" style="${i===0?'border-color:#18181b;border-width:1.5px;':''}">
         <div class="between-top">
@@ -300,9 +607,9 @@ SCREENS.push({title:'Quote', render: el => {
         </div>
       </div>`).join('');
   }
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Instant Quote</h1><span class="pill pill-soft">POST /v2/rates</span></div>
-    <p class="sub">Live carrier rates returned in under a second. Toggle accessorials to watch totals move.</p>
+  el.innerHTML=`
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Instant Quote</h1><span class="pill pill-live">POST /v2/rates · ~340ms</span></div>
+    <p class="sub">Live carrier rates in under a second. Accessorial chips toggle the totals. Best rate is benchmarked against the market index.</p>
     <div class="grid g-1-2" style="align-items:start;">
       <div class="card card-lg stack-lg">
         <div>
@@ -315,15 +622,18 @@ SCREENS.push({title:'Quote', render: el => {
         </div>
         <div>
           <span class="field-lab">Accessorials</span>
-          <div class="corner-controls" id="accs"></div>
+          <div class="row" style="flex-wrap:wrap;gap:6px;" id="accs"></div>
+        </div>
+        <div class="card" style="background:#fafafa;border-style:dashed;padding:12px 14px;">
+          <div class="between"><span class="lab">Best vs market</span><span class="pill pill-ok mono" id="mktBadge">-6.7%</span></div>
         </div>
       </div>
       <div class="stack" id="rates"></div>
     </div>
   `;
-  el.querySelector('#laneSel').innerHTML = LANES.map((l,i)=>`<option value="${i}">${l.o} → ${l.d} · ${l.mi} mi</option>`).join('');
-  el.querySelector('#cls').innerHTML = [50,55,60,65,70,77.5,85,92.5,100,125,150,175,200].map(c=>`<option ${c===cls?'selected':''}>${c}</option>`).join('');
-  el.querySelector('#accs').innerHTML = accState.map((a,i)=>`<span class="chip" data-i="${i}">${a.name} <span class="x">${fmt$0(a.cost)}</span></span>`).join('');
+  el.querySelector('#laneSel').innerHTML=LANES.map((l,i)=>`<option value="${i}">${l.o} → ${l.d} · ${l.mi} mi</option>`).join('');
+  el.querySelector('#cls').innerHTML=[50,55,60,65,70,77.5,85,92.5,100,125,150,175,200].map(c=>`<option ${c===cls?'selected':''}>${c}</option>`).join('');
+  el.querySelector('#accs').innerHTML=accState.map((a,i)=>`<span class="chip" data-i="${i}">${a.name} <span class="x">${fmt$0(a.cost)}</span></span>`).join('');
   el.querySelectorAll('#accs .chip').forEach(c=>c.addEventListener('click',()=>{const i=+c.dataset.i;accState[i].on=!accState[i].on;c.classList.toggle('on');paint();}));
   el.querySelector('#laneSel').addEventListener('change',e=>{lane=LANES[+e.target.value];paint();});
   el.querySelector('#wt').addEventListener('input',e=>{weight=+e.target.value||1240;paint();});
@@ -331,370 +641,73 @@ SCREENS.push({title:'Quote', render: el => {
   paint();
 }});
 
-/* 2 — Tracking */
-SCREENS.push({title:'Tracking', render: el => {
-  const sh = SHIPMENTS[3];
-  const events = [
-    {when:new Date(sh.ts.getTime()), where:sh.lane.o, e:'Pickup scheduled', s:'done'},
-    {when:new Date(sh.ts.getTime()+3*3600*1000), where:sh.lane.o, e:'Picked up', s:'done'},
-    {when:new Date(sh.ts.getTime()+8*3600*1000), where:sh.lane.o.split(',')[0]+' Service Center', e:'In transit · departed origin', s:'done'},
-    {when:new Date(sh.ts.getTime()+22*3600*1000), where:'Memphis, TN Hub', e:'In transit · transferred', s:'done'},
-    {when:new Date(NOW.getTime()-2*3600*1000), where:sh.lane.d.split(',')[0]+' Service Center', e:'Out for delivery', s:'now'},
-    {when:new Date(NOW.getTime()+4*3600*1000), where:sh.lane.d, e:'Estimated delivery', s:''},
+/* ============ 7 · INTELLIGENCE FEED ============ */
+SCREENS.push({title:'Intelligence Feed', render: el => {
+  const theftHotspots=[
+    {l:'Ontario, CA',sev:'High',n:8,kinds:'Electronics, food'},
+    {l:'Memphis, TN',sev:'Watch',n:4,kinds:'Apparel'},
+    {l:'Dallas, TX',sev:'Watch',n:3,kinds:'Pharma, electronics'},
+    {l:'Atlanta, GA',sev:'Note',n:2,kinds:'Misc'},
   ];
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Tracking</h1><span class="pill pill-live">Live</span></div>
-    <p class="sub">PRO lookup returns full milestone history, current location, and ETA. No phone calls.</p>
-    <div class="grid g-1-2" style="align-items:start;">
-      <div class="card card-lg stack">
-        <div>
-          <span class="field-lab">PRO Number</span>
-          <input class="input mono" value="${sh.pro}" />
-        </div>
-        <div class="card" style="background:#fafafa;border-style:dashed;">
-          <div class="between"><span class="lab">Shipment</span><span class="pill pill-soft mono">${sh.id}</span></div>
-          <div class="num-md" style="margin-top:8px;">${sh.lane.o} → ${sh.lane.d}</div>
-          <div class="lab" style="margin-top:2px;">${sh.lane.mi} mi · ${sh.weight} lbs · class ${sh.cls}</div>
-          <div class="div"></div>
-          <div class="between">
-            <div><span class="lab">Carrier</span><div class="num-md" style="color:${sh.carrier.color};">${sh.carrier.name}</div></div>
-            <div style="text-align:right;"><span class="lab">Status</span><div><span class="pill pill-warn">Out for delivery</span></div></div>
-          </div>
-          <div class="div"></div>
-          <div class="between">
-            <div><span class="lab">ETA</span><div class="num-md mono">${fmtTime(events[5].when)}</div></div>
-            <div style="text-align:right;"><span class="lab">Est. arrival in</span><div class="num-md mono">~4 hr</div></div>
-          </div>
+  const weather=[
+    {l:'I-40 Memphis–Nashville',sev:'Watch',e:'Heavy rain · 6-8 hr delay risk'},
+    {l:'I-80 Cheyenne–Laramie',sev:'High',e:'High-wind advisory · over-height holds'},
+  ];
+  const ports=[
+    {p:'LA / Long Beach',wait:'2.4 days',d:-0.6},
+    {p:'NY / NJ',wait:'1.1 days',d:0.2},
+    {p:'Savannah',wait:'1.8 days',d:0},
+    {p:'Houston',wait:'2.9 days',d:0.4},
+  ];
+  const carrierNews=[
+    {c:'XPO',t:'Q1 LTL margin guidance trimmed · operating ratio 87.4',d:'2d ago'},
+    {c:'Saia',t:'Acquired 4 terminals · capacity +6% Southeast',d:'5d ago'},
+    {c:'Estes Express',t:'New tariff effective May 1 · GRI +3.9%',d:'1w ago'},
+  ];
+  const fuelOutlook=[
+    {h:'EIA short-term forecast',v:'Diesel +$0.04/gal next 4 wks',sev:'warn'},
+    {h:'Capacity index · LTL',v:'Loose · tender rejection 4.1%',sev:'ok'},
+  ];
+  el.innerHTML=`
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Intelligence Feed</h1><span class="pill pill-live">OSINT · 5 sources</span></div>
+    <p class="sub">Cargo theft, weather, ports, carrier news, fuel outlook. Public data your peers don't bother to read.</p>
+    <div class="grid g2">
+      <div class="card card-lg">
+        <div class="stack-h">Cargo theft hotspots <span class="source-tag" style="margin-left:auto;">· <b>CargoNet</b></span></div>
+        <div class="divide" style="margin-top:8px;">
+          ${theftHotspots.map(h=>`<div class="between"><div><div class="num-md">${h.l}</div><div class="lab">${h.n} incidents · ${h.kinds}</div></div><span class="pill ${h.sev==='High'?'pill-bad':h.sev==='Watch'?'pill-warn':'pill-soft'}">${h.sev}</span></div>`).join('')}
         </div>
       </div>
       <div class="card card-lg">
-        <div class="stack-h">Milestones</div>
-        <div class="tl">
-          ${events.map(ev=>`
-            <div class="tl-i ${ev.s}">
-              <div class="tl-time mono">${fmtTime(ev.when)}</div>
-              <div class="tl-where">${ev.where}</div>
-              <div class="tl-event">${ev.e}</div>
-            </div>`).join('')}
+        <div class="stack-h">Weather &amp; route disruption <span class="source-tag" style="margin-left:auto;">· <b>NWS</b></span></div>
+        <div class="divide" style="margin-top:8px;">
+          ${weather.map(w=>`<div class="between"><div><div class="num-md">${w.l}</div><div class="lab">${w.e}</div></div><span class="pill ${w.sev==='High'?'pill-bad':'pill-warn'}">${w.sev}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="card card-lg">
+        <div class="stack-h">Port congestion <span class="source-tag" style="margin-left:auto;">· <b>BTS</b></span></div>
+        <div class="divide" style="margin-top:8px;">
+          ${ports.map(p=>`<div class="between"><div class="num-md">${p.p}</div><div class="row" style="gap:8px;"><span class="mono num-md">${p.wait}</span><span class="${p.d>0?'delta-up':p.d<0?'delta-dn':'delta-flat'}">${p.d===0?'flat':pct(p.d,1)}</span></div></div>`).join('')}
+        </div>
+      </div>
+      <div class="card card-lg">
+        <div class="stack-h">Carrier news <span class="source-tag" style="margin-left:auto;">· <b>FMCSA + press</b></span></div>
+        <div class="divide" style="margin-top:8px;">
+          ${carrierNews.map(n=>`<div><div class="row" style="gap:8px;"><span class="pill pill-soft">${n.c}</span><span class="lab">${n.d}</span></div><div style="font-size:13.5px;font-weight:500;margin-top:6px;">${n.t}</div></div>`).join('')}
+        </div>
+      </div>
+      <div class="card card-lg" style="grid-column:1 / -1;">
+        <div class="stack-h">Fuel &amp; capacity outlook <span class="source-tag" style="margin-left:auto;">· <b>EIA STEO</b></span></div>
+        <div class="grid g2" style="margin-top:8px;">
+          ${fuelOutlook.map(f=>`<div class="alert-row ${f.sev}"><div><div class="lab" style="text-transform:none;letter-spacing:0;">${f.h}</div><div class="num-md" style="margin-top:2px;">${f.v}</div></div></div>`).join('')}
         </div>
       </div>
     </div>
   `;
-}});
-
-/* 3 — Pickup Board */
-SCREENS.push({title:'Pickup Board', render: el => {
-  const upcoming = SHIPMENTS.slice(0,8).map((s,i)=>({
-    ...s,
-    pickup: new Date(NOW.getTime()+(rndInt(2,72)*3600*1000)),
-    state: pick(['Confirmed','Confirmed','Awaiting BOL','Confirmed','Tendered','Confirmed','Awaiting BOL'])
-  })).sort((a,b)=>a.pickup-b.pickup);
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Pickup Board</h1><span class="pill pill-live">Live</span></div>
-    <p class="sub">Every dispatched shipment with state, BOL readiness, and pickup window. Tendered through delivered, all in one feed.</p>
-    <div class="grid g4" style="margin-bottom:18px;">
-      <div class="card"><span class="lab">Open</span><div class="num-xl mono">${upcoming.length}</div></div>
-      <div class="card"><span class="lab">Awaiting BOL</span><div class="num-xl mono">${upcoming.filter(u=>u.state==='Awaiting BOL').length}</div></div>
-      <div class="card"><span class="lab">Picking up next 24h</span><div class="num-xl mono">${upcoming.filter(u=>u.pickup-NOW<24*3600*1000).length}</div></div>
-      <div class="card"><span class="lab">Total weight</span><div class="num-xl mono">${(upcoming.reduce((s,u)=>s+u.weight,0)/1000).toFixed(1)}k</div><div class="lab" style="margin-top:2px;">lbs</div></div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <table>
-        <thead><tr><th>Pickup</th><th>Shipment</th><th>Lane</th><th>Carrier</th><th>Weight</th><th>State</th><th></th></tr></thead>
-        <tbody>${upcoming.map(u=>`
-          <tr class="row-hover">
-            <td class="mono">${fmtTime(u.pickup)}</td>
-            <td class="mono" style="color:var(--muted);">${u.id}</td>
-            <td>${u.lane.o.split(',')[0]} → ${u.lane.d.split(',')[0]}</td>
-            <td><span style="color:${u.carrier.color};font-weight:600;">${u.carrier.name}</span></td>
-            <td class="mono">${u.weight}</td>
-            <td>${u.state==='Confirmed'?'<span class="pill pill-ok">Confirmed</span>':u.state==='Awaiting BOL'?'<span class="pill pill-warn">Awaiting BOL</span>':'<span class="pill pill-soft">Tendered</span>'}</td>
-            <td style="text-align:right;color:var(--muted);">→</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}});
-
-/* 4 — Lane Mix */
-SCREENS.push({title:'Lane Mix', render: el => {
-  const tally = {};
-  SHIPMENTS.forEach(s=>{
-    const k = `${s.lane.o.split(',')[0]} → ${s.lane.d.split(',')[0]}`;
-    tally[k] = tally[k] || {k, mi:s.lane.mi, count:0, spend:0};
-    tally[k].count++; tally[k].spend += s.total;
-  });
-  const ranked = Object.values(tally).sort((a,b)=>b.spend-a.spend).slice(0,8);
-  const max = ranked[0].spend;
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Lane Mix</h1></div>
-    <p class="sub">Where the volume actually goes. Top lanes by 30-day spend, count, and average rate per mile.</p>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <table>
-        <thead><tr><th>Lane</th><th>Shipments</th><th>Spend</th><th>$/mile</th><th style="width:34%;">Share</th></tr></thead>
-        <tbody>${ranked.map(r=>`
-          <tr class="row-hover">
-            <td><div class="num-md">${r.k}</div><div class="lab">${r.mi} mi</div></td>
-            <td class="mono">${r.count}</td>
-            <td class="mono">${fmt$0(r.spend)}</td>
-            <td class="mono">${fmt$((r.spend/r.count)/r.mi)}</td>
-            <td><div class="bar"><span style="width:${(r.spend/max*100).toFixed(0)}%;background:var(--ink);"></span></div></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}});
-
-/* 5 — Spend Over Time */
-SCREENS.push({title:'Spend Over Time', render: el => {
-  const months = ['Nov','Dec','Jan','Feb','Mar','Apr'];
-  const spend = [82400, 91200, 78900, 84600, 92100, 96800];
-  const ship = [142, 158, 138, 147, 161, 169];
-  const avg = spend.map((s,i)=>s/ship[i]);
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Spend Over Time</h1></div>
-    <p class="sub">Six-month spend, shipment volume, and average cost per shipment. Last month: <b>${fmt$0(spend[5])}</b> across <b>${ship[5]}</b> shipments.</p>
-    <div class="grid g3" style="margin-bottom:18px;">
-      <div class="card"><span class="lab">This month</span><div class="num-xl mono">${fmt$0(spend[5])}</div><div class="delta-up">${pct((spend[5]-spend[4])/spend[4]*100)} vs last</div></div>
-      <div class="card"><span class="lab">Shipments</span><div class="num-xl mono">${ship[5]}</div><div class="delta-up">${pct((ship[5]-ship[4])/ship[4]*100)} vs last</div></div>
-      <div class="card"><span class="lab">Avg / shipment</span><div class="num-xl mono">${fmt$0(avg[5])}</div><div class="delta-dn">${pct((avg[5]-avg[4])/avg[4]*100)} vs last</div></div>
-    </div>
-    <div class="card card-lg"><canvas id="spendChart" height="140"></canvas></div>
-  `;
-  setTimeout(()=>{
-    const ctx=el.querySelector('#spendChart');
-    new Chart(ctx,{type:'bar',data:{labels:months,datasets:[
-      {type:'bar',label:'Spend',data:spend,backgroundColor:'#09090b',borderRadius:6,yAxisID:'y'},
-      {type:'line',label:'Shipments',data:ship,borderColor:'#ea580c',backgroundColor:'#ea580c',pointBackgroundColor:'#ea580c',tension:0.35,yAxisID:'y1',borderWidth:2.5,pointRadius:4}
-    ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+(v/1000)+'k'},grid:{color:'#f4f4f5'}},y1:{position:'right',beginAtZero:true,grid:{display:false}}}}});
-  },50);
-}});
-
-/* 6 — Class & Weight Mix */
-SCREENS.push({title:'Class & Weight Mix', render: el => {
-  const classBuckets = [50,55,60,65,70,77.5,85,92.5,100,125,150,175,200];
-  const counts = classBuckets.map(c=>SHIPMENTS.filter(s=>s.cls===c).length);
-  const wb = [
-    {l:'<500',n:0},{l:'500-1k',n:0},{l:'1-2k',n:0},{l:'2-3k',n:0},{l:'3-4k',n:0},{l:'4k+',n:0}
-  ];
-  SHIPMENTS.forEach(s=>{
-    if(s.weight<500) wb[0].n++; else if(s.weight<1000) wb[1].n++;
-    else if(s.weight<2000) wb[2].n++; else if(s.weight<3000) wb[3].n++;
-    else if(s.weight<4000) wb[4].n++; else wb[5].n++;
-  });
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Class &amp; Weight Mix</h1></div>
-    <p class="sub">What we ship, by NMFC freight class and weight band. Drives reclass exposure and equipment decisions.</p>
-    <div class="grid g2">
-      <div class="card card-lg"><div class="stack-h">By freight class</div><canvas id="cl" height="180"></canvas></div>
-      <div class="card card-lg"><div class="stack-h">By weight band</div><canvas id="wb" height="180"></canvas></div>
-    </div>
-  `;
-  setTimeout(()=>{
-    new Chart(el.querySelector('#cl'),{type:'bar',data:{labels:classBuckets.map(String),datasets:[{data:counts,backgroundColor:'#09090b',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f4f4f5'},beginAtZero:true,ticks:{stepSize:2}}}}});
-    new Chart(el.querySelector('#wb'),{type:'bar',data:{labels:wb.map(w=>w.l),datasets:[{data:wb.map(w=>w.n),backgroundColor:'#ea580c',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f4f4f5'},beginAtZero:true,ticks:{stepSize:2}}}}});
-  },50);
-}});
-
-/* 7 — Rate Stack */
-SCREENS.push({title:'Rate Stack', render: el => {
-  const sh = SHIPMENTS[7];
-  const lh = sh.linehaul, fl = sh.fuel, acc = sh.accTotal, total = sh.total;
-  const seg = (n,c,lab)=>`<div style="flex:${n};background:${c};">${lab}</div>`;
-  const eiaLast = EIA_DIESEL[EIA_DIESEL.length-1].v;
-  const eiaPrev = EIA_DIESEL[EIA_DIESEL.length-2].v;
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Rate Stack</h1><span class="pill pill-soft">Single shipment breakdown</span></div>
-    <p class="sub">${sh.lane.o} → ${sh.lane.d} · ${sh.weight} lbs · class ${sh.cls} · ${sh.carrier.name}</p>
-    <div class="grid g3" style="margin-bottom:18px;">
-      <div class="card"><span class="lab">Linehaul</span><div class="num-xl mono">${fmt$0(lh)}</div><div class="lab" style="margin-top:4px;">${(lh/total*100).toFixed(0)}% of total</div></div>
-      <div class="card"><span class="lab">Fuel surcharge</span><div class="num-xl mono">${fmt$0(fl)}</div><div class="lab" style="margin-top:4px;">${(fl/lh*100).toFixed(1)}% of linehaul</div></div>
-      <div class="card"><span class="lab">Accessorials</span><div class="num-xl mono">${fmt$0(acc)}</div><div class="lab" style="margin-top:4px;">${sh.accessorials.length} applied</div></div>
-    </div>
-    <div class="card card-lg" style="margin-bottom:14px;">
-      <div class="stack-h">Total ${fmt$0(total)}</div>
-      <div class="seg-bar">
-        ${seg(lh,'#09090b',fmt$0(lh))}
-        ${seg(fl,'#525252','Fuel')}
-        ${acc>0?seg(acc,'#ea580c','Acc'):''}
-      </div>
-      <div class="row" style="margin-top:14px;font-size:12px;color:var(--muted);">
-        <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#09090b;"></span>Linehaul</span>
-        <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#525252;"></span>Fuel</span>
-        <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#ea580c;"></span>Accessorials</span>
-      </div>
-    </div>
-    <div class="grid g2">
-      <div class="card">
-        <span class="lab">Accessorials applied</span>
-        <div class="stack" style="margin-top:10px;">
-          ${sh.accessorials.length===0?'<div style="color:var(--muted);font-size:13px;">None</div>':
-            sh.accessorials.map(a=>`<div class="between"><span style="font-size:13px;">${a.name}</span><span class="mono num-md">${fmt$0(a.cost)}</span></div>`).join('')}
-        </div>
-      </div>
-      <div class="card">
-        <span class="lab">Fuel anchor <span class="source-tag">·  <b>EIA.gov</b> · cached ${EIA_DIESEL[EIA_DIESEL.length-1].wk}</span></span>
-        <div class="row" style="margin-top:10px;justify-content:space-between;">
-          <div><div class="num-lg mono">$${eiaLast.toFixed(3)}</div><div class="lab">U.S. retail / gal</div></div>
-          <div style="text-align:right;"><div class="${eiaLast>eiaPrev?'delta-up':'delta-dn'}">${pct((eiaLast-eiaPrev)/eiaPrev*100,2)}</div><div class="lab">vs last week</div></div>
-        </div>
-      </div>
-    </div>
-  `;
-}});
-
-/* 8 — Carrier Scorecard */
-SCREENS.push({title:'Carrier Scorecard', render: el => {
-  const stats = CARRIERS.slice(0,6).map((c,i)=>{
-    const ships = SHIPMENTS.filter(s=>s.carrier.code===c.code);
-    const spend = ships.reduce((s,x)=>s+x.total,0);
-    const otp = 88 + (i*1.7) + rnd()*5;
-    const claims = (rnd()*2.4).toFixed(2);
-    const transit = (1.6 + rnd()*1.4).toFixed(1);
-    return {c, count:ships.length, spend, otp, claims, transit};
-  }).sort((a,b)=>b.spend-a.spend);
-  const totalSpend = stats.reduce((s,x)=>s+x.spend,0);
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Carrier Scorecard</h1></div>
-    <p class="sub">Performance by carrier. Spend share, on-time delivery, claims rate, average transit. The data behind every contract negotiation.</p>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <table>
-        <thead><tr><th>Carrier</th><th>Shipments</th><th>Spend</th><th>Share</th><th>On-time</th><th>Claims</th><th>Avg transit</th></tr></thead>
-        <tbody>${stats.map(s=>`
-          <tr class="row-hover">
-            <td><div class="row"><span class="legend-dot" style="background:${s.c.color};width:14px;height:14px;"></span><b>${s.c.name}</b></div></td>
-            <td class="mono">${s.count}</td>
-            <td class="mono">${fmt$0(s.spend)}</td>
-            <td><div class="bar" style="width:120px;"><span style="width:${(s.spend/totalSpend*100).toFixed(0)}%;background:${s.c.color};"></span></div></td>
-            <td><span class="pill ${s.otp>92?'pill-ok':s.otp>88?'pill-warn':'pill-bad'}">${s.otp.toFixed(1)}%</span></td>
-            <td class="mono">${s.claims}%</td>
-            <td class="mono">${s.transit}d</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}});
-
-/* 9 — Accessorial Exposure */
-SCREENS.push({title:'Accessorial Exposure', render: el => {
-  const rows = ACCS.slice(0,9).map(a=>{
-    const billed = rndInt(8,42);
-    const quoted = Math.max(2, billed - rndInt(0,18));
-    const exposure = (billed-quoted)*a.cost;
-    return {a, billed, quoted, exposure, surprise: billed - quoted};
-  }).sort((a,b)=>b.exposure-a.exposure);
-  const totalExp = rows.reduce((s,r)=>s+r.exposure,0);
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Accessorial Exposure</h1><span class="pill pill-bad">Leak: ${fmt$0(totalExp)} / mo</span></div>
-    <p class="sub">Accessorials billed but not quoted. Every row is a surprise charge that should have been priced upfront. The ROI of API quote capture.</p>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <table>
-        <thead><tr><th>Accessorial</th><th>Quoted</th><th>Billed</th><th>Surprise</th><th>Unit cost</th><th>Exposure</th></tr></thead>
-        <tbody>${rows.map(r=>`
-          <tr class="row-hover">
-            <td><b>${r.a.name}</b><div class="lab mono">${r.a.code}</div></td>
-            <td class="mono">${r.quoted}</td>
-            <td class="mono">${r.billed}</td>
-            <td>${r.surprise>0?`<span class="pill pill-bad">+${r.surprise}</span>`:'<span class="pill pill-ok">0</span>'}</td>
-            <td class="mono">${fmt$0(r.a.cost)}</td>
-            <td class="mono"><b>${fmt$0(r.exposure)}</b></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}});
-
-/* 10 — Document Hub */
-SCREENS.push({title:'Document Hub', render: el => {
-  const docs = SHIPMENTS.slice(0,9).flatMap(s=>{
-    const out = [{kind:'BOL',ref:'BOL-'+(2240000+rndInt(1,9000)),s,d:new Date(s.ts.getTime()+3600*1000),status:'Available'}];
-    if(s.ts<new Date(NOW.getTime()-2*24*3600*1000)){
-      out.push({kind:'POD',ref:'POD-'+(8810000+rndInt(1,9000)),s,d:new Date(s.ts.getTime()+24*3600*1000),status:'Signed'});
-      out.push({kind:'INV',ref:'INV-'+(1004400+rndInt(1,9000)),s,d:new Date(s.ts.getTime()+48*3600*1000),status:'Issued'});
-    }
-    return out;
-  }).slice(0,12).sort((a,b)=>b.d-a.d);
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Document Hub</h1></div>
-    <p class="sub">Every BOL, POD, and invoice for every shipment. One click instead of three emails.</p>
-    <div class="grid g3">
-      ${docs.map(d=>`
-        <div class="card" style="cursor:pointer;">
-          <div class="row" style="align-items:flex-start;gap:14px;">
-            <div class="doc-thumb ${d.kind.toLowerCase()}">${d.kind}</div>
-            <div style="flex:1;min-width:0;">
-              <div class="num-md mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.ref}</div>
-              <div class="lab" style="margin-top:2px;">${d.s.lane.o.split(',')[0]} → ${d.s.lane.d.split(',')[0]}</div>
-              <div class="row" style="margin-top:8px;gap:6px;">
-                <span class="pill ${d.status==='Signed'?'pill-ok':d.status==='Issued'?'pill-soft':'pill-warn'}">${d.status}</span>
-                <span class="lab mono">${ago(d.d)}</span>
-              </div>
-            </div>
-          </div>
-        </div>`).join('')}
-    </div>
-  `;
-}});
-
-/* 11 — Fuel Watch */
-SCREENS.push({title:'Fuel Watch', render: el => {
-  const eiaLabels = EIA_DIESEL.map(d=>d.wk.slice(5));
-  const eiaVals = EIA_DIESEL.map(d=>d.v);
-  const surcharge = eiaVals.map(v=> +(0.31 + (v-3.75)*0.10).toFixed(3));
-  const last = eiaVals[eiaVals.length-1];
-  const first = eiaVals[0];
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Fuel Watch</h1><span class="pill pill-live">EIA · cached ${EIA_DIESEL[EIA_DIESEL.length-1].wk}</span></div>
-    <p class="sub">U.S. on-highway diesel index from EIA.gov vs the fuel surcharge applied on our shipments. The gap is the negotiation lever.</p>
-    <div class="grid g3" style="margin-bottom:18px;">
-      <div class="card"><span class="lab">EIA diesel · this week</span><div class="num-xl mono">$${last.toFixed(3)}</div><div class="${last>first?'delta-up':'delta-dn'}">${pct((last-first)/first*100,1)} 12-wk</div></div>
-      <div class="card"><span class="lab">Avg surcharge applied</span><div class="num-xl mono">${(surcharge.reduce((s,v)=>s+v,0)/surcharge.length*100).toFixed(1)}%</div><div class="lab" style="margin-top:4px;">across active carriers</div></div>
-      <div class="card"><span class="lab">Lever</span><div class="num-xl mono">${fmt$0(2400)}</div><div class="lab" style="margin-top:4px;">est. monthly impact at -1pt</div></div>
-    </div>
-    <div class="card card-lg"><div class="stack-h">Diesel index vs applied surcharge</div><canvas id="fuel" height="120"></canvas><div class="source-tag" style="margin-top:10px;">Source ·  <b>EIA.gov v2</b> · weekly U.S. retail · cached, live key wires later</div></div>
-  `;
-  setTimeout(()=>{
-    new Chart(el.querySelector('#fuel'),{data:{labels:eiaLabels,datasets:[
-      {type:'line',label:'EIA diesel ($/gal)',data:eiaVals,borderColor:'#09090b',backgroundColor:'#09090b',tension:0.35,yAxisID:'y',borderWidth:2.5,pointRadius:3},
-      {type:'line',label:'Surcharge applied (%)',data:surcharge.map(v=>v*100),borderColor:'#ea580c',backgroundColor:'#ea580c',tension:0.35,yAxisID:'y1',borderWidth:2.5,pointRadius:3}
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{position:'left',ticks:{callback:v=>'$'+v.toFixed(2)},grid:{color:'#f4f4f5'}},y1:{position:'right',ticks:{callback:v=>v.toFixed(1)+'%'},grid:{display:false}}}}});
-  },50);
-}});
-
-/* 12 — Market Index */
-SCREENS.push({title:'Market Index', render: el => {
-  const labels = BLS_PPI.map(b=>b.m.slice(2));
-  const blsV = BLS_PPI.map(b=>b.v);
-  const fredV = FRED_TRUCK.map(f=>f.v);
-  // our paid rate per mile, anchored off the BLS trend with offset
-  const paidRPM = blsV.map((v,i)=> +(2.05 + (v-137.4)*0.018 + (rnd()-0.5)*0.04).toFixed(3));
-  const last = blsV[blsV.length-1], first = blsV[0];
-  const lastP = paidRPM[paidRPM.length-1], firstP = paidRPM[0];
-  el.innerHTML = `
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Market Index</h1><span class="pill pill-live">BLS · FRED · cached</span></div>
-    <p class="sub">Public freight indexes vs our average paid rate per mile. Below the market line is a win. Above is exposure.</p>
-    <div class="grid g3" style="margin-bottom:18px;">
-      <div class="card"><span class="lab">BLS PPI · trucking</span><div class="num-xl mono">${last.toFixed(1)}</div><div class="${last>first?'delta-up':'delta-dn'}">${pct((last-first)/first*100,1)} 12-mo</div></div>
-      <div class="card"><span class="lab">Our avg paid $/mile</span><div class="num-xl mono">$${lastP.toFixed(2)}</div><div class="${lastP>firstP?'delta-up':'delta-dn'}">${pct((lastP-firstP)/firstP*100,1)} 12-mo</div></div>
-      <div class="card"><span class="lab">vs market</span><div class="num-xl mono delta-dn">-1.3%</div><div class="lab" style="margin-top:4px;">paid below trend</div></div>
-    </div>
-    <div class="card card-lg"><div class="stack-h">Indexes vs our paid rate</div><canvas id="mkt" height="120"></canvas><div class="source-tag" style="margin-top:10px;">Sources ·  <b>BLS Public Data API</b> (PCU484 trucking PPI) ·  <b>FRED</b> (long-distance trucking PPI) · cached, live keys wire later</div></div>
-  `;
-  setTimeout(()=>{
-    new Chart(el.querySelector('#mkt'),{data:{labels,datasets:[
-      {type:'line',label:'BLS PPI · trucking',data:blsV,borderColor:'#09090b',backgroundColor:'#09090b',tension:0.35,yAxisID:'y',borderWidth:2.5,pointRadius:3},
-      {type:'line',label:'FRED long-haul PPI',data:fredV,borderColor:'#71717a',backgroundColor:'#71717a',tension:0.35,yAxisID:'y',borderWidth:2,pointRadius:2,borderDash:[5,5]},
-      {type:'line',label:'Our paid $/mi',data:paidRPM,borderColor:'#ea580c',backgroundColor:'#ea580c',tension:0.35,yAxisID:'y1',borderWidth:2.5,pointRadius:3}
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{position:'left',title:{display:false},grid:{color:'#f4f4f5'}},y1:{position:'right',ticks:{callback:v=>'$'+v.toFixed(2)},grid:{display:false}}}}});
-  },50);
 }});
 
 /* ---------- carousel ---------- */
-const car = $('car'), dotsEl = $('dots');
+const car=$('car'), dotsEl=$('dots');
 SCREENS.forEach((s,i)=>{
   const div=document.createElement('div');
   div.className='scr'; div.id='scr'+i;
@@ -704,14 +717,12 @@ SCREENS.forEach((s,i)=>{
   dot.addEventListener('click',()=>go(i));
 });
 function current(){return Math.round(car.scrollLeft/window.innerWidth);}
-function go(i){i=Math.max(0,Math.min(SCREENS.length-1,i));car.scrollTo({left:i*window.innerWidth,behavior:'smooth'});}
+function go(i){const n=SCREENS.length;i=((i%n)+n)%n;car.scrollTo({left:i*window.innerWidth,behavior:'smooth'});}
 function paint(){
   const c=current();
   $('crumb').textContent=SCREENS[c].title;
   $('pageNum').textContent=(c+1)+' / '+SCREENS.length;
   document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===c));
-  $('prev').disabled = c===0;
-  $('next').disabled = c===SCREENS.length-1;
 }
 car.addEventListener('scroll',()=>{requestAnimationFrame(paint);});
 $('prev').addEventListener('click',()=>go(current()-1));
