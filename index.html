@@ -740,7 +740,7 @@ SCREENS.push({title:'Spend Pulse', render: el => {
       {type:'line',label:'Target',data:targetLine,borderColor:'#fb923c',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false}
     ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{x:{grid:{color:'#27272a'}},y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#27272a'}}}}});
     new Chart(el.querySelector('#sp2'),{type:'line',data:{labels:EIA_DIESEL.map(d=>d.wk),datasets:[
-      {label:'EIA Diesel ($/gal)',data:eiaV,borderColor:'#fafafa',backgroundColor:'#fafafa',tension:0.35,borderWidth:2.5,pointRadius:3}
+      {label:'EIA Diesel ($/gal)',data:eiaV,borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,0.15)',tension:0.35,borderWidth:2.5,pointRadius:3,fill:true}
     ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#27272a'}},y:{ticks:{callback:v=>'$'+v.toFixed(2)},grid:{color:'#27272a'}}}}});
   },50);
 }});
