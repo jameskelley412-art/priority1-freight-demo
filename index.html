@@ -658,27 +658,49 @@ SCREENS.push({title:'Exception Queue', render: el => {
   `;
 }});
 
-/* ============ 6 · QUOTE ============ */
+/* ============ 6 · FREIGHT ESTIMATOR ============ */
 SCREENS.push({title:'Quote', render: el => {
   const accState=ACCS.slice(0,8).map(a=>({...a,on:false}));
   let lane=LANES[0]; let weight=1240; let cls=70;
+  let length=48, width=40, height=48;
+  function classFromDensity(d){
+    if(d>=30) return 50; if(d>=22.5) return 55; if(d>=15) return 60;
+    if(d>=12) return 65; if(d>=10) return 70; if(d>=8) return 77.5;
+    if(d>=6) return 85; if(d>=4) return 92.5; if(d>=3) return 100;
+    if(d>=2) return 125; if(d>=1) return 150; return 175;
+  }
   function rates(){
+    const cuft=(length*width*height)/1728;
+    const density=weight/Math.max(cuft,0.1);
+    const suggestedClass=classFromDensity(density);
     const accTotal=accState.filter(a=>a.on).reduce((s,a)=>s+a.cost,0);
-    return CARRIERS.slice(0,5).map((c,i)=>{
+    const cards=CARRIERS.slice(0,5).map((c,i)=>{
       const base=Math.round(lane.mi*(1.0+i*0.06)+weight*0.18);
       const fuel=Math.round(base*0.31);
-      return {c,base,fuel,acc:accTotal,total:base+fuel+accTotal,transit:1+i+(lane.mi>500?1:0),sid:'P1-STD-'+(i+1)};
+      const total=base+fuel+accTotal;
+      const contract=Math.round(total*0.94);
+      const market=Math.round(total*1.06);
+      const p1Take=Math.round(total*(0.12+(i*0.012)));
+      return {c,base,fuel,acc:accTotal,total,contract,market,p1Take,transit:1+i+(lane.mi>500?1:0),sid:'P1-STD-'+(i+1)};
     }).sort((a,b)=>a.total-b.total);
+    return {cards,cuft,density,suggestedClass};
   }
   function paint(){
+    const latency=320+rndInt(20,80);
+    el.querySelector('#latBadge').textContent=`POST /v2/rates · ${latency}ms`;
     const r=rates();
-    const market=Math.round(r[0].total*1.072);
-    el.querySelector('#mktBadge').textContent = `${pct(-((market-r[0].total)/market*100),1)} vs market`;
-    el.querySelector('#rates').innerHTML = r.map((x,i)=>`
-      <div class="card" style="${i===0?'border-color:#18181b;border-width:1.5px;':''}">
+    const cards=r.cards;
+    const market=cards[0].market;
+    const best=cards[0].total;
+    el.querySelector('#mktBadge').textContent=pct(-((market-best)/market*100),1);
+    el.querySelector('#densBadge').textContent=`${r.density.toFixed(1)} lb/cuft → class ${r.suggestedClass}`;
+    el.querySelector('#densBadge').className='pill mono '+(r.suggestedClass===cls?'pill-ok':'pill-warn');
+    el.querySelector('#cuft').textContent=r.cuft.toFixed(1)+' cuft';
+    el.querySelector('#rates').innerHTML=cards.map((x,i)=>`
+      <div class="card arriving" style="${i===0?'border-color:var(--accent);border-width:1.5px;':''}">
         <div class="between-top">
           <div class="row">
-            <div style="width:36px;height:36px;border-radius:8px;background:${x.c.color};color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;">${x.c.code}</div>
+            <div style="width:36px;height:36px;border-radius:8px;background:${x.c.color};color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;flex-shrink:0;">${x.c.code}</div>
             <div>
               <div style="font-weight:700;font-size:14px;">${x.c.name}</div>
               <div class="lab">${x.sid} · ${x.transit} day${x.transit>1?'s':''}</div>
@@ -689,8 +711,14 @@ SCREENS.push({title:'Quote', render: el => {
             ${i===0?'<span class="pill pill-ink" style="margin-top:4px;">Best</span>':''}
           </div>
         </div>
-        <div class="div" style="margin:14px 0 12px;"></div>
-        <div class="between" style="font-size:12px;color:var(--muted);">
+        <div class="div" style="margin:14px 0 10px;"></div>
+        <div class="grid g3" style="gap:8px;">
+          <div><span class="lab">Contract</span><div class="num-md mono delta-dn">${fmt$0(x.contract)}</div></div>
+          <div><span class="lab">Market</span><div class="num-md mono">${fmt$0(x.market)}</div></div>
+          <div><span class="lab">P1 take</span><div class="num-md mono" style="color:var(--accent);">${fmt$0(x.p1Take)}</div></div>
+        </div>
+        <div class="div" style="margin:10px 0 8px;"></div>
+        <div class="between" style="font-size:11.5px;color:var(--muted);">
           <span>Linehaul <b class="mono" style="color:var(--ink);">${fmt$0(x.base)}</b></span>
           <span>Fuel <b class="mono" style="color:var(--ink);">${fmt$0(x.fuel)}</b></span>
           <span>Acc <b class="mono" style="color:var(--ink);">${fmt$0(x.acc)}</b></span>
@@ -698,8 +726,8 @@ SCREENS.push({title:'Quote', render: el => {
       </div>`).join('');
   }
   el.innerHTML=`
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Instant Quote</h1><span class="pill pill-live">POST /v2/rates · ~340ms</span></div>
-    <p class="sub">Live carrier rates in under a second. Accessorial chips toggle the totals. Best rate is benchmarked against the market index.</p>
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Freight Estimator</h1><span class="pill pill-live mono" id="latBadge">POST /v2/rates · 340ms</span></div>
+    <p class="sub">Live rates with density calc, contract overlay, market benchmark, and Priority1 margin transparency.</p>
     <div class="grid g-1-2" style="align-items:start;">
       <div class="card card-lg stack-lg">
         <div>
@@ -711,11 +739,22 @@ SCREENS.push({title:'Quote', render: el => {
           <div><span class="field-lab">Class</span><select class="select" id="cls"></select></div>
         </div>
         <div>
+          <span class="field-lab">Dimensions in · <span id="cuft" class="mono" style="color:var(--ink);">53.3 cuft</span></span>
+          <div class="grid g3">
+            <input class="input mono" id="lng" value="48" placeholder="L" />
+            <input class="input mono" id="wdt" value="40" placeholder="W" />
+            <input class="input mono" id="hgt" value="48" placeholder="H" />
+          </div>
+          <div style="margin-top:8px;"><span class="pill mono pill-warn" id="densBadge">density · class</span></div>
+        </div>
+        <div>
           <span class="field-lab">Accessorials</span>
           <div class="row" style="flex-wrap:wrap;gap:6px;" id="accs"></div>
         </div>
-        <div class="card" style="background:#fafafa;border-style:dashed;padding:12px 14px;">
-          <div class="between"><span class="lab">Best vs market</span><span class="pill pill-ok mono" id="mktBadge">-6.7%</span></div>
+        <div class="grid g3" style="gap:8px;">
+          <div class="card" style="padding:10px 12px;background:#18181b;"><span class="lab">vs Market</span><div class="num-md mono delta-dn" id="mktBadge">-6.7%</div></div>
+          <div class="card" style="padding:10px 12px;background:#18181b;"><span class="lab">Lane heat</span><div class="num-md" style="color:var(--good);">Loose</div></div>
+          <div class="card" style="padding:10px 12px;background:#18181b;"><span class="lab">Capacity</span><div class="num-md" style="color:var(--good);">High</div></div>
         </div>
       </div>
       <div class="stack" id="rates"></div>
@@ -728,72 +767,99 @@ SCREENS.push({title:'Quote', render: el => {
   el.querySelector('#laneSel').addEventListener('change',e=>{lane=LANES[+e.target.value];paint();});
   el.querySelector('#wt').addEventListener('input',e=>{weight=+e.target.value||1240;paint();});
   el.querySelector('#cls').addEventListener('change',e=>{cls=+e.target.value;paint();});
+  el.querySelector('#lng').addEventListener('input',e=>{length=+e.target.value||48;paint();});
+  el.querySelector('#wdt').addEventListener('input',e=>{width=+e.target.value||40;paint();});
+  el.querySelector('#hgt').addEventListener('input',e=>{height=+e.target.value||48;paint();});
   paint();
 }});
 
-/* ============ 7 · INTELLIGENCE FEED ============ */
+/* ============ 7 · INTELLIGENCE FEED (map view) ============ */
 SCREENS.push({title:'Intelligence Feed', render: el => {
-  const theftHotspots=[
-    {l:'Ontario, CA',sev:'High',n:8,kinds:'Electronics, food'},
-    {l:'Memphis, TN',sev:'Watch',n:4,kinds:'Apparel'},
-    {l:'Dallas, TX',sev:'Watch',n:3,kinds:'Pharma, electronics'},
-    {l:'Atlanta, GA',sev:'Note',n:2,kinds:'Misc'},
+  const intel = [
+    {type:'theft', loc:[-117.65,34.064], r:34, sev:'high', label:'Ontario, CA · 8 incidents · electronics, food'},
+    {type:'theft', loc:[-90.049,35.149], r:18, sev:'watch', label:'Memphis · 4 incidents · apparel'},
+    {type:'theft', loc:[-96.797,32.776], r:16, sev:'watch', label:'Dallas · 3 incidents · pharma'},
+    {type:'theft', loc:[-84.388,33.749], r:12, sev:'note', label:'Atlanta · 2 incidents'},
+    {type:'weather', loc:[-88.2,35.7], r:36, sev:'watch', label:'I-40 corridor · heavy rain'},
+    {type:'weather', loc:[-105.5,41.3], r:46, sev:'high', label:'I-80 WY · high-wind advisory'},
+    {type:'port', loc:[-118.27,33.74], r:26, label:'LA/LB · 2.4d', delta:-0.6},
+    {type:'port', loc:[-74.05,40.65], r:14, label:'NY/NJ · 1.1d', delta:0.2},
+    {type:'port', loc:[-81.10,32.08], r:18, label:'Savannah · 1.8d', delta:0},
+    {type:'port', loc:[-95.27,29.74], r:30, sev:'watch', label:'Houston · 2.9d', delta:0.4},
+    {type:'news', loc:[-80.84,35.23], label:'XPO · OR 87.4 trim'},
+    {type:'news', loc:[-87.629,41.878], label:'Saia · +6% SE capacity'},
+    {type:'news', loc:[-77.48,37.55], label:'Estes · GRI +3.9%'},
   ];
-  const weather=[
-    {l:'I-40 Memphis–Nashville',sev:'Watch',e:'Heavy rain · 6-8 hr delay risk'},
-    {l:'I-80 Cheyenne–Laramie',sev:'High',e:'High-wind advisory · over-height holds'},
+  const ticker = [
+    {sev:'high', t:'High-wind advisory I-80 WY · over-height holds active', src:'NWS', when:Date.now()-12*60000},
+    {sev:'high', t:'Cargo theft cluster · Ontario CA Industry · 8 in 24h', src:'CargoNet', when:Date.now()-46*60000},
+    {sev:'watch', t:'Houston port wait climbed to 2.9 days · +0.4d', src:'BTS', when:Date.now()-2*3600000},
+    {sev:'watch', t:'XPO Q1 LTL operating ratio guidance trimmed to 87.4', src:'press', when:Date.now()-5*3600000},
+    {sev:'note', t:'EIA STEO · diesel +$0.04 expected next 4 weeks', src:'EIA', when:Date.now()-9*3600000},
   ];
-  const ports=[
-    {p:'LA / Long Beach',wait:'2.4 days',d:-0.6},
-    {p:'NY / NJ',wait:'1.1 days',d:0.2},
-    {p:'Savannah',wait:'1.8 days',d:0},
-    {p:'Houston',wait:'2.9 days',d:0.4},
-  ];
-  const carrierNews=[
-    {c:'XPO',t:'Q1 LTL margin guidance trimmed · operating ratio 87.4',d:'2d ago'},
-    {c:'Saia',t:'Acquired 4 terminals · capacity +6% Southeast',d:'5d ago'},
-    {c:'Estes Express',t:'New tariff effective May 1 · GRI +3.9%',d:'1w ago'},
-  ];
-  const fuelOutlook=[
-    {h:'EIA short-term forecast',v:'Diesel +$0.04/gal next 4 wks',sev:'warn'},
-    {h:'Capacity index · LTL',v:'Loose · tender rejection 4.1%',sev:'ok'},
-  ];
-  el.innerHTML=`
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Intelligence Feed</h1><span class="pill pill-live">OSINT · 5 sources</span></div>
-    <p class="sub">Cargo theft, weather, ports, carrier news, fuel outlook. Public data your peers don't bother to read.</p>
-    <div class="grid g2">
-      <div class="card card-lg">
-        <div class="stack-h">Cargo theft hotspots <span class="source-tag" style="margin-left:auto;">· <b>CargoNet</b></span></div>
-        <div class="divide" style="margin-top:8px;">
-          ${theftHotspots.map(h=>`<div class="between"><div><div class="num-md">${h.l}</div><div class="lab">${h.n} incidents · ${h.kinds}</div></div><span class="pill ${h.sev==='High'?'pill-bad':h.sev==='Watch'?'pill-warn':'pill-soft'}">${h.sev}</span></div>`).join('')}
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Intelligence Feed</h1><span class="pill pill-live">${intel.length} signals · 5 sources</span></div>
+    <p class="sub">OSINT layered on the network. Theft, weather, ports, carrier moves. Pulses are active high-severity events.</p>
+    <div class="card card-lg" style="padding:14px;">
+      <div id="intelMap" style="width:100%;height:54vh;min-height:340px;"></div>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;">
+        <div class="row" style="gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;">
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:11px;height:11px;border-radius:999px;background:#f87171;"></span>Cargo theft</span>
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:11px;height:11px;border-radius:999px;background:#22d3ee;"></span>Weather</span>
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:11px;height:11px;border-radius:999px;background:#fb923c;"></span>Port</span>
+          <span class="row" style="gap:6px;"><span style="display:inline-block;width:11px;height:11px;border-radius:999px;background:#fbbf24;"></span>Carrier news</span>
         </div>
-      </div>
-      <div class="card card-lg">
-        <div class="stack-h">Weather &amp; route disruption <span class="source-tag" style="margin-left:auto;">· <b>NWS</b></span></div>
-        <div class="divide" style="margin-top:8px;">
-          ${weather.map(w=>`<div class="between"><div><div class="num-md">${w.l}</div><div class="lab">${w.e}</div></div><span class="pill ${w.sev==='High'?'pill-bad':'pill-warn'}">${w.sev}</span></div>`).join('')}
-        </div>
-      </div>
-      <div class="card card-lg">
-        <div class="stack-h">Port congestion <span class="source-tag" style="margin-left:auto;">· <b>BTS</b></span></div>
-        <div class="divide" style="margin-top:8px;">
-          ${ports.map(p=>`<div class="between"><div class="num-md">${p.p}</div><div class="row" style="gap:8px;"><span class="mono num-md">${p.wait}</span><span class="${p.d>0?'delta-up':p.d<0?'delta-dn':'delta-flat'}">${p.d===0?'flat':pct(p.d,1)}</span></div></div>`).join('')}
-        </div>
-      </div>
-      <div class="card card-lg">
-        <div class="stack-h">Carrier news <span class="source-tag" style="margin-left:auto;">· <b>FMCSA + press</b></span></div>
-        <div class="divide" style="margin-top:8px;">
-          ${carrierNews.map(n=>`<div><div class="row" style="gap:8px;"><span class="pill pill-soft">${n.c}</span><span class="lab">${n.d}</span></div><div style="font-size:13.5px;font-weight:500;margin-top:6px;">${n.t}</div></div>`).join('')}
-        </div>
-      </div>
-      <div class="card card-lg" style="grid-column:1 / -1;">
-        <div class="stack-h">Fuel &amp; capacity outlook <span class="source-tag" style="margin-left:auto;">· <b>EIA STEO</b></span></div>
-        <div class="grid g2" style="margin-top:8px;">
-          ${fuelOutlook.map(f=>`<div class="alert-row ${f.sev}"><div><div class="lab" style="text-transform:none;letter-spacing:0;">${f.h}</div><div class="num-md" style="margin-top:2px;">${f.v}</div></div></div>`).join('')}
-        </div>
+        <span class="source-tag">CargoNet · NWS · BTS · FMCSA · EIA</span>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;padding:0;overflow:hidden;">
+      <div class="between" style="padding:14px 16px;border-bottom:1px solid var(--line);">
+        <div class="stack-h" style="margin:0;">Active intel · last 24h</div>
+        <span class="ticker"><span class="live-dot"></span>Live</span>
+      </div>
+      <table>
+        <tbody>${ticker.map(t=>`
+          <tr>
+            <td style="width:1%;"><span class="pill ${t.sev==='high'?'pill-bad':t.sev==='watch'?'pill-warn':'pill-soft'}">${t.sev==='high'?'High':t.sev==='watch'?'Watch':'Note'}</span></td>
+            <td style="font-weight:500;font-size:13.5px;">${t.t}</td>
+            <td class="lab mono" style="text-align:right;white-space:nowrap;"><span data-since="${t.when}"></span> · ${t.src}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
   `;
+  const wrap = el.querySelector('#intelMap');
+  const draw = () => {
+    const W=wrap.clientWidth, H=wrap.clientHeight;
+    if(W<50||H<50){setTimeout(draw,80);return;}
+    wrap.innerHTML='';
+    const svg=d3.select(wrap).append('svg').attr('width',W).attr('height',H).style('display','block');
+    const proj=d3.geoAlbersUsa();
+    const path=d3.geoPath(proj);
+    d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(us=>{
+      const states=topojson.feature(us,us.objects.states);
+      proj.fitSize([W-20,H-30],states).translate([W/2,H/2]);
+      svg.append('g').selectAll('path').data(states.features).join('path').attr('d',path)
+        .attr('fill','#18181b').attr('stroke','#3f3f46').attr('stroke-width',0.7);
+      svg.append('path').datum(topojson.mesh(us,us.objects.states,(a,b)=>a!==b))
+        .attr('d',path).attr('fill','none').attr('stroke','#52525b').attr('stroke-width',0.5);
+      const colors={theft:'#f87171', weather:'#22d3ee', port:'#fb923c', news:'#fbbf24'};
+      intel.forEach(item=>{
+        const p=proj(item.loc); if(!p)return;
+        const c=colors[item.type];
+        const r=item.r||14;
+        svg.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',r).attr('fill',c).attr('opacity',0.10);
+        svg.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',r*0.55).attr('fill',c).attr('opacity',0.20);
+        svg.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',5).attr('fill',c).attr('stroke','#0a0a0a').attr('stroke-width',1.5);
+        svg.append('text').attr('x',p[0]+10).attr('y',p[1]+3).attr('font-size',9.5).attr('font-weight',600).attr('fill','#d4d4d8').attr('font-family','Inter').text(item.label.split('·')[0].trim());
+        if(item.sev==='high'){
+          const pulseRing=svg.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',6).attr('fill','none').attr('stroke',c).attr('stroke-width',2).attr('opacity',0.85);
+          (function loop(){pulseRing.attr('r',6).attr('opacity',0.85).transition().duration(1700).ease(d3.easeQuadOut).attr('r',r*0.85).attr('opacity',0).on('end',loop);})();
+        }
+      });
+    }).catch(()=>{wrap.innerHTML='<div class="card">Intel map failed.</div>';});
+  };
+  setTimeout(draw,60);
 }});
 
 /* reorder so the map opens the deck */
