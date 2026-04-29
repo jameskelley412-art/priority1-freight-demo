@@ -220,8 +220,8 @@ const BLS_PPI=[
   {m:'Feb',v:142.0},{m:'Mar',v:142.8},{m:'Apr',v:143.4},
 ];
 
-/* shipment generator */
-function genShipment(idx){
+/* shipment generator — modeled on Priority1 v2 invoice/dispatch response shape */
+function genShipment(idx, daysAgo){
   const lane=pick(LANES); const carrier=pick(CARRIERS);
   const weight=rndInt(450,4400);
   const cls=pick([50,55,60,65,70,77.5,85,92.5,100,125,150,175,200]);
@@ -233,23 +233,45 @@ function genShipment(idx){
   if(rnd()>0.85) accs.push(pick(ACCS));
   const accTotal=accs.reduce((s,a)=>s+a.cost,0);
   const total=linehaul+fuel+accTotal;
-  const ts=new Date(NOW.getTime()-rndInt(2,30*24*60)*60000);
+  const ts=new Date(NOW.getTime()-(daysAgo*24*60+rndInt(0,1439))*60000);
   return {id:'P1-'+(1830472+idx),pro:'999'+(10000000+idx),lane,carrier,weight,cls,linehaul,fuel,accessorials:accs,accTotal,total,ts};
 }
-const SHIPMENTS=Array.from({length:60},(_,i)=>genShipment(i));
+/* 12 weeks of mock invoice data, ~22 shipments per week */
+const SHIPMENTS=[];
+for(let w=0; w<12; w++){
+  const n = 18 + rndInt(0,8);
+  for(let i=0;i<n;i++) SHIPMENTS.push(genShipment(SHIPMENTS.length, w*7 + rndInt(0,6)));
+}
+SHIPMENTS.sort((a,b)=>b.ts-a.ts);
+/* aggregates derived from invoice shape */
+const TOTAL_SPEND_12W = SHIPMENTS.reduce((s,x)=>s+x.total,0);
+const MTD_SPEND = SHIPMENTS.filter(s=>s.ts>=new Date(NOW.getTime()-30*24*3600*1000)).reduce((s,x)=>s+x.total,0);
+const LAST7_SPEND = SHIPMENTS.filter(s=>s.ts>=new Date(NOW.getTime()-7*24*3600*1000)).reduce((s,x)=>s+x.total,0);
+const PRIOR7_SPEND = SHIPMENTS.filter(s=>{const d=NOW-s.ts;return d>=7*24*3600*1000&&d<14*24*3600*1000;}).reduce((s,x)=>s+x.total,0);
+const ACCESSORIAL_LEAK = SHIPMENTS.filter(s=>s.ts>=new Date(NOW.getTime()-30*24*3600*1000)).reduce((s,x)=>s+x.accTotal,0);
 
 const SCREENS=[];
 
 /* ============ 1 · COMMAND CENTER ============ */
 SCREENS.push({title:'Command Center', render: el => {
-  const ytd=22480000, mtd=5840000;
-  const spendSpark=[4.8,5.0,5.2,5.1,5.4,5.3,5.6,5.5,5.7,5.6,5.8,5.84];
-  const otpSpark=[89.2,90.1,91.0,90.5,91.8,91.3,92.0,92.1,91.7,92.2,92.3,92.4];
-  const leakSpark=[42,38,45,52,41,39,44,40,42,38,40,38];
-  const savSpark=[110,118,125,128,131,135,138,140,141,142,142,142];
-  const inTransit=10, inTransitValue=384000;
-  const exceptions=7, leakMTD=38400, savingsMTD=142000;
+  /* derived from Priority1 v2 invoice endpoint shape */
+  const weekBuckets=Array(12).fill(0);
+  SHIPMENTS.forEach(s=>{const wk=Math.floor((NOW-s.ts)/(7*24*3600*1000));if(wk<12) weekBuckets[wk]+=s.total;});
+  const weekly=weekBuckets.slice().reverse();
+  const mtd=MTD_SPEND;
+  const wowDelta=PRIOR7_SPEND>0?((LAST7_SPEND-PRIOR7_SPEND)/PRIOR7_SPEND)*100:0;
+  const inTransit=SHIPMENTS.filter(s=>(NOW-s.ts)<48*3600*1000).length;
+  const inTransitValue=SHIPMENTS.filter(s=>(NOW-s.ts)<48*3600*1000).reduce((s,x)=>s+x.total,0);
+  const exceptions=SHIPMENTS.filter(s=>s.accTotal>0&&(NOW-s.ts)<7*24*3600*1000).length>>1 + 4;
+  const leakMTD=ACCESSORIAL_LEAK;
   const onTime=92.4;
+  const savingsMTD=Math.round(mtd*0.024);
+  const spendSpark=weekly.map(v=>v||1);
+  const otpSpark=[89.2,90.1,91.0,90.5,91.8,91.3,92.0,92.1,91.7,92.2,92.3,92.4];
+  const leakBySpark=Array(12).fill(0);
+  SHIPMENTS.forEach(s=>{const wk=Math.floor((NOW-s.ts)/(7*24*3600*1000));if(wk<12) leakBySpark[wk]+=s.accTotal;});
+  const leakSpark=leakBySpark.slice().reverse().map(v=>v||1);
+  const savSpark=spendSpark.map(v=>Math.round(v*0.024));
   const alerts=[
     {sev:'bad',t:'XPO running 14% above market on Memphis–Atlanta',a:'Re-tender lane'},
     {sev:'warn',t:'Cargo theft alert · Ontario, CA in last 24h',a:'Reroute or escort'},
@@ -439,55 +461,59 @@ SCREENS.push({title:'Network Map', render: el => {
 
 /* ============ 3 · SPEND PULSE ============ */
 SCREENS.push({title:'Spend Pulse', render: el => {
-  const months=BLS_PPI.map(b=>b.m);
-  const spend=[3920,4180,4380,4290,4510,4630,4720,4880,4810,4990,5240,5840].map(v=>v*1000);
-  const budget=Array(12).fill(4500*1000);
-  const blsV=BLS_PPI.map(b=>b.v);
+  /* aggregate from Priority1 v2 invoice endpoint */
+  const weekBuckets=Array(12).fill(0);
+  SHIPMENTS.forEach(s=>{const wk=Math.floor((NOW-s.ts)/(7*24*3600*1000));if(wk<12) weekBuckets[wk]+=s.total;});
+  const weekly=weekBuckets.slice().reverse();
+  const weekLabels=Array.from({length:12},(_,i)=>{const d=new Date(NOW.getTime()-(11-i)*7*24*3600*1000);return (d.getMonth()+1)+'/'+d.getDate();});
+  const weeklyTarget=Math.round((TOTAL_SPEND_12W/12)*1.05);
+  const targetLine=Array(12).fill(weeklyTarget);
   const eiaV=EIA_DIESEL.map(d=>d.v);
-  const wins=[
-    {l:'Memphis → Atlanta',d:-7.2,$:18400},
-    {l:'Newark → Boston',d:-5.8,$:11200},
-    {l:'Dallas → Houston',d:-4.1,$:7800},
-  ];
-  const leaks=[
-    {l:'Chicago → Dallas',d:11.4,$:24600},
-    {l:'LA → Phoenix',d:6.9,$:9700},
-    {l:'Atlanta → Charlotte',d:4.2,$:4100},
-  ];
+  /* lane wins/leaks derived from invoice data */
+  const laneAgg={};
+  SHIPMENTS.forEach(s=>{const k=s.lane.o+' → '+s.lane.d;
+    laneAgg[k]=laneAgg[k]||{lane:s.lane,k,count:0,spend:0,miles:0};
+    laneAgg[k].count++; laneAgg[k].spend+=s.total; laneAgg[k].miles+=s.lane.mi;
+  });
+  const overallRPM=SHIPMENTS.reduce((s,x)=>s+x.total,0)/SHIPMENTS.reduce((s,x)=>s+x.lane.mi,0);
+  const ranked=Object.values(laneAgg).map(l=>({...l,rpm:l.spend/l.miles,dpct:(l.spend/l.miles/overallRPM-1)*100}));
+  const wins=ranked.filter(l=>l.dpct<0).sort((a,b)=>a.dpct-b.dpct).slice(0,3);
+  const leaks=ranked.filter(l=>l.dpct>0).sort((a,b)=>b.dpct-a.dpct).slice(0,3);
+  const annualRR=Math.round(MTD_SPEND*12);
   el.innerHTML=`
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Spend Pulse</h1><span class="pill pill-soft">Trailing 12 months</span></div>
-    <p class="sub">Where the money goes, where it leaks, where you win. Internal spend over public BLS trucking PPI and EIA diesel.</p>
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Spend Pulse</h1><span class="pill pill-soft">Trailing 12 weeks · invoice data</span></div>
+    <p class="sub">Where the money goes, where it leaks, where you win. Aggregated from Priority1 invoice records, overlaid on public BLS and EIA indexes.</p>
     <div class="grid g4" style="margin-bottom:14px;">
-      <div class="card"><span class="lab">Spend YTD</span><div class="num-xl mono">${fmt$M(22480000)}</div><div class="delta-up">+8.2% vs LY</div></div>
-      <div class="card"><span class="lab">vs Budget MTD</span><div class="num-xl mono delta-dn">-${fmt$0(140000).slice(1)}</div><div class="lab" style="margin-top:2px;">2.4% under</div></div>
+      <div class="card"><span class="lab">Spend · 12 weeks</span><div class="num-xl mono">${fmt$0(TOTAL_SPEND_12W)}</div><div class="lab" style="margin-top:2px;">${SHIPMENTS.length} invoices</div></div>
+      <div class="card"><span class="lab">Spend MTD</span><div class="num-xl mono">${fmt$0(MTD_SPEND)}</div><div class="lab" style="margin-top:2px;">last 30 days</div></div>
       <div class="card"><span class="lab">vs Market</span><div class="num-xl mono delta-dn">-1.7%</div><div class="lab" style="margin-top:2px;">below BLS PPI</div></div>
-      <div class="card"><span class="lab">Run-rate</span><div class="num-xl mono">${fmt$M(70080000)}</div><div class="lab" style="margin-top:2px;">annualized</div></div>
+      <div class="card"><span class="lab">Run-rate</span><div class="num-xl mono">${fmt$0(annualRR)}</div><div class="lab" style="margin-top:2px;">annualized</div></div>
     </div>
     <div class="grid g-2-1">
-      <div class="card card-lg"><div class="stack-h">Spend vs budget</div><canvas id="sp1" height="120"></canvas></div>
+      <div class="card card-lg"><div class="stack-h">Weekly spend · invoice aggregate</div><canvas id="sp1" height="120"></canvas></div>
       <div class="card card-lg"><div class="stack-h">EIA diesel · weekly</div><canvas id="sp2" height="120"></canvas></div>
     </div>
     <div class="grid g2" style="margin-top:14px;">
       <div class="card">
-        <div class="stack-h" style="color:var(--good);">Top wins · paid below market</div>
+        <div class="stack-h" style="color:var(--good);">Top wins · paid below average $/mile</div>
         <div class="divide" style="margin-top:8px;">
-          ${wins.map(w=>`<div class="between"><div><div class="num-md">${w.l}</div><div class="lab">savings ${fmt$0(w.$)}/mo</div></div><span class="delta-dn mono">${pct(w.d,1)}</span></div>`).join('')}
+          ${wins.map(w=>`<div class="between"><div><div class="num-md">${w.k}</div><div class="lab">${w.count} invoices · ${fmt$(w.rpm)}/mi</div></div><span class="delta-dn mono">${pct(w.dpct,1)}</span></div>`).join('')}
         </div>
       </div>
       <div class="card">
-        <div class="stack-h" style="color:var(--bad);">Top leaks · paid above market</div>
+        <div class="stack-h" style="color:var(--bad);">Top leaks · paid above average $/mile</div>
         <div class="divide" style="margin-top:8px;">
-          ${leaks.map(w=>`<div class="between"><div><div class="num-md">${w.l}</div><div class="lab">exposure ${fmt$0(w.$)}/mo</div></div><span class="delta-up mono">${pct(w.d,1)}</span></div>`).join('')}
+          ${leaks.map(w=>`<div class="between"><div><div class="num-md">${w.k}</div><div class="lab">${w.count} invoices · ${fmt$(w.rpm)}/mi</div></div><span class="delta-up mono">${pct(w.dpct,1)}</span></div>`).join('')}
         </div>
       </div>
     </div>
-    <div class="source-tag" style="margin-top:14px;">Sources · <b>BLS Public Data API</b> trucking PPI · <b>EIA.gov v2</b> weekly retail · cached, live keys wire later</div>
+    <div class="source-tag" style="margin-top:14px;">Sources · <b>Priority1 v2</b> invoices (live demo data) · <b>BLS Public Data API</b> trucking PPI · <b>EIA.gov v2</b> weekly retail · cached, live keys wire later</div>
   `;
   setTimeout(()=>{
-    new Chart(el.querySelector('#sp1'),{data:{labels:months,datasets:[
-      {type:'bar',label:'Spend',data:spend,backgroundColor:'#fafafa',borderRadius:4},
-      {type:'line',label:'Budget',data:budget,borderColor:'#fb923c',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false}
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{x:{grid:{color:'#27272a'}},y:{ticks:{callback:v=>'$'+(v/1000000).toFixed(1)+'M'},grid:{color:'#27272a'}}}}});
+    new Chart(el.querySelector('#sp1'),{data:{labels:weekLabels,datasets:[
+      {type:'bar',label:'Weekly spend',data:weekly,backgroundColor:'#fafafa',borderRadius:4},
+      {type:'line',label:'Target',data:targetLine,borderColor:'#fb923c',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{x:{grid:{color:'#27272a'}},y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#27272a'}}}}});
     new Chart(el.querySelector('#sp2'),{type:'line',data:{labels:EIA_DIESEL.map(d=>d.wk),datasets:[
       {label:'EIA Diesel ($/gal)',data:eiaV,borderColor:'#fafafa',backgroundColor:'#fafafa',tension:0.35,borderWidth:2.5,pointRadius:3}
     ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#27272a'}},y:{ticks:{callback:v=>'$'+v.toFixed(2)},grid:{color:'#27272a'}}}}});
