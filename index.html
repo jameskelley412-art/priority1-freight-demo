@@ -125,6 +125,11 @@
   @keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
   .num-tick{transition:color .25s}
   .num-tick.flash{color:var(--good)!important}
+  .map-grid{display:grid;grid-template-columns:1fr minmax(280px,320px);gap:14px;align-items:start}
+  @media(max-width:1024px){.map-grid{grid-template-columns:1fr}}
+  .mode-side{padding:12px 0;border-bottom:1px solid var(--line2)}
+  .mode-side:last-child{border-bottom:0;padding-bottom:0}
+  .mode-side:first-of-type{padding-top:0}
   .mode-table{display:flex;flex-direction:column}
   .mode-head{display:grid;grid-template-columns:1.2fr 1fr 1.4fr 1.4fr 1fr;gap:14px;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
   .mode-row{display:grid;grid-template-columns:1.2fr 1fr 1.4fr 1.4fr 1fr;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line2)}
@@ -437,37 +442,48 @@ SCREENS.push({title:'Network Map', render: el => {
   el.innerHTML = `
     <div class="between" style="margin-bottom:6px;"><h1 class="h1">Network Map</h1><span class="pill pill-live">${TRUCKS.length} trucks · ${SHIPS.length} ships</span></div>
     <p class="sub">Every active shipment, road and ocean, on one canvas. Margin per truck, FBX rate per ship, port wait times live.</p>
-    <div class="card card-lg" style="margin-bottom:14px;">
-      <div class="mode-table">
-        <div class="mode-head"><span>Mode</span><span>In transit</span><span>Total billed</span><span>Total margin</span><span>Avg margin</span></div>
-        ${(()=>{
-          const ltlT=TRUCKS.slice(0,7), ftlT=TRUCKS.slice(7);
-          const rows=[
-            {k:'LTL', color:'#fb923c', count:ltlT.length, billed:ltlT.reduce((s,t)=>s+t.billed,0), margin:ltlT.reduce((s,t)=>s+t.margin,0)},
-            {k:'FTL', color:'#fafafa', count:ftlT.length, billed:ftlT.reduce((s,t)=>s+t.billed,0), margin:ftlT.reduce((s,t)=>s+t.margin,0)},
-            {k:'Ocean', color:'#22d3ee', count:SHIPS.length, billed:SHIPS.reduce((s,t)=>s+t.billed,0), margin:Math.round(SHIPS.reduce((s,t)=>s+t.billed,0)*0.11)},
-          ];
-          return rows.map(r=>`
-            <div class="mode-row">
-              <span class="row" style="gap:8px;"><span class="legend-dot" style="background:${r.color};"></span><b>${r.k}</b></span>
-              <div class="num-md mono">${r.count.toLocaleString()}</div>
-              <div class="num-md mono">${fmt$0(r.billed)}</div>
-              <div class="num-md mono" style="color:var(--good);">${fmt$0(r.margin)}</div>
-              <div class="num-md mono">${(r.margin/r.billed*100).toFixed(1)}%</div>
-            </div>`).join('');
-        })()}
-      </div>
-    </div>
-    <div class="card card-lg" style="padding:14px;">
-      <div id="mapWrap" style="position:relative;width:100%;height:62vh;min-height:380px;"></div>
-      <div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px;">
-        <div class="row" style="gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;">
-          <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#ea580c;border-radius:2px;"></span>Truck</span>
-          <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#22d3ee;border-radius:2px;"></span>Ship</span>
-          <span class="row" style="gap:6px;"><span style="display:inline-block;width:11px;height:11px;border:2px solid #a78bfa;border-radius:999px;"></span>Port</span>
-          <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#f87171;border-radius:2px;"></span>Flagged</span>
+    <div class="map-grid">
+      <div class="card card-lg" style="padding:14px;">
+        <div id="mapWrap" style="position:relative;width:100%;height:74vh;min-height:480px;cursor:grab;"></div>
+        <div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px;">
+          <div class="row" style="gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;">
+            <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#ea580c;border-radius:2px;"></span>Truck</span>
+            <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#22d3ee;border-radius:2px;"></span>Ship</span>
+            <span class="row" style="gap:6px;"><span style="display:inline-block;width:11px;height:11px;border:2px solid #a78bfa;border-radius:999px;"></span>Port</span>
+            <span class="row" style="gap:6px;"><span style="display:inline-block;width:14px;height:9px;background:#f87171;border-radius:2px;"></span>Flagged</span>
+            <span class="lab" style="text-transform:none;letter-spacing:0;font-size:10.5px;">Drag to pan · scroll to zoom · click a unit</span>
+          </div>
+          <span class="source-tag">us-atlas · world-atlas · AIS · Freightos FBX · SCFI · BTS</span>
         </div>
-        <span class="source-tag">us-atlas · world-atlas · AIS · Freightos FBX · SCFI · BTS</span>
+      </div>
+      <div class="stack">
+        <div class="card card-lg">
+          <div class="stack-h">Mode mix</div>
+          ${(()=>{
+            const ltlT=TRUCKS.slice(0,7), ftlT=TRUCKS.slice(7);
+            const rows=[
+              {k:'LTL', color:'#fb923c', count:ltlT.length, billed:ltlT.reduce((s,t)=>s+t.billed,0), margin:ltlT.reduce((s,t)=>s+t.margin,0)},
+              {k:'FTL', color:'#fafafa', count:ftlT.length, billed:ftlT.reduce((s,t)=>s+t.billed,0), margin:ftlT.reduce((s,t)=>s+t.margin,0)},
+              {k:'Ocean', color:'#22d3ee', count:SHIPS.length, billed:SHIPS.reduce((s,t)=>s+t.billed,0), margin:Math.round(SHIPS.reduce((s,t)=>s+t.billed,0)*0.11)},
+            ];
+            return rows.map(r=>`
+              <div class="mode-side">
+                <div class="between"><span class="row" style="gap:8px;"><span class="legend-dot" style="background:${r.color};"></span><b style="font-size:14px;">${r.k}</b></span><span class="num-md mono">${r.count.toLocaleString()}</span></div>
+                <div class="row" style="margin-top:6px;justify-content:space-between;font-size:12px;color:var(--muted);font-family:'JetBrains Mono';font-variant-numeric:tabular-nums;">
+                  <span>${fmt$0(r.billed)}</span>
+                  <span style="color:var(--good);">${fmt$0(r.margin)}</span>
+                  <span>${(r.margin/r.billed*100).toFixed(1)}%</span>
+                </div>
+                <div class="row" style="margin-top:4px;justify-content:space-between;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;">
+                  <span>billed</span><span>margin</span><span>avg</span>
+                </div>
+              </div>`).join('');
+          })()}
+        </div>
+        <div class="card card-lg" id="mapDetail">
+          <div class="stack-h">Selection</div>
+          <div id="mapDetailBody" style="text-align:center;padding:22px 8px;color:var(--muted);font-size:13px;">Click a truck or ship for shipment detail.</div>
+        </div>
       </div>
     </div>
   `;
@@ -476,7 +492,9 @@ SCREENS.push({title:'Network Map', render: el => {
     const W=wrap.clientWidth, H=wrap.clientHeight;
     if(W<50||H<50){setTimeout(draw,80);return;}
     wrap.innerHTML='';
-    const svg=d3.select(wrap).append('svg').attr('width',W).attr('height',H).style('display','block');
+    const _svg=d3.select(wrap).append('svg').attr('width',W).attr('height',H).style('display','block');
+    const svg=_svg.append('g');
+    _svg.call(d3.zoom().scaleExtent([0.8,8]).on('zoom',e=>svg.attr('transform',e.transform)));
     const proj=d3.geoEqualEarth().rotate([95,0,0]);
     proj.fitSize([W-20,H-30],{type:'Sphere'});
     proj.rotate([95,0,0]);
@@ -551,7 +569,7 @@ SCREENS.push({title:'Network Map', render: el => {
       /* truck markers + labels */
       const truckG=svg.append('g'); const truckLabelG=svg.append('g');
       TRUCKS.forEach(t=>{
-        t.tEl=truckG.append('g');
+        t.tEl=truckG.append('g').style('cursor','pointer').on('click',e=>{e.stopPropagation();selectItem({type:'truck',t});});
         t.tEl.append('rect').attr('width',12).attr('height',8).attr('x',-6).attr('y',-4).attr('rx',2).attr('fill',t.flag?'#f87171':'#ea580c').attr('stroke','#0a0a0a').attr('stroke-width',1.2).style('filter',t.flag?'drop-shadow(0 0 4px rgba(248,113,113,0.7))':'drop-shadow(0 0 4px rgba(234,88,12,0.55))');
         t.lEl=truckLabelG.append('g').style('pointer-events','none');
         const bg=t.lEl.append('rect').attr('rx',4).attr('fill','#09090b').attr('stroke','#3f3f46').attr('stroke-width',0.6);
@@ -568,7 +586,7 @@ SCREENS.push({title:'Network Map', render: el => {
       /* ship markers + labels */
       const shipG=svg.append('g'); const shipLabelG=svg.append('g');
       SHIPS.forEach(s=>{
-        s.tEl=shipG.append('g');
+        s.tEl=shipG.append('g').style('cursor','pointer').on('click',e=>{e.stopPropagation();selectItem({type:'ship',s});});
         s.tEl.append('rect').attr('width',18).attr('height',7).attr('x',-9).attr('y',-3.5).attr('rx',1.5).attr('fill','#22d3ee').attr('stroke','#0a0a0a').attr('stroke-width',1).style('filter','drop-shadow(0 0 5px rgba(34,211,238,0.65))');
         s.lEl=shipLabelG.append('g').style('pointer-events','none');
         const bg=s.lEl.append('rect').attr('rx',4).attr('fill','#09090b').attr('stroke','#22d3ee').attr('stroke-width',0.6);
@@ -582,6 +600,42 @@ SCREENS.push({title:'Network Map', render: el => {
         tt1.attr('text-anchor','middle').attr('y',-20);
         tt2.attr('text-anchor','middle').attr('y',-9);
       });
+      const portByLoc=new Map(PORTS.map(p=>[p.loc.join(','),p.n]));
+      function portName(loc){return portByLoc.get(loc.join(','))||`${loc[1].toFixed(2)}, ${loc[0].toFixed(2)}`;}
+      function selectItem(sel){
+        const body=document.getElementById('mapDetailBody'); if(!body) return;
+        if(sel.type==='truck'){
+          const t=sel.t;
+          body.style.padding='0'; body.style.textAlign='left'; body.style.color='var(--ink)';
+          body.innerHTML=`
+            <div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+              <span class="pill ${t.flag?'pill-bad':'pill-soft'}">${t.flag?t.flag.toUpperCase():'IN TRANSIT'}</span>
+              <span class="pill pill-soft mono">PRO ${t.pro}</span>
+            </div>
+            <div class="num-lg mono">${fmt$0(t.billed)}</div>
+            <div class="lab" style="text-transform:none;letter-spacing:0;margin-top:2px;font-size:12px;">${t.lane.o} → ${t.lane.d} · ${t.lane.mi} mi</div>
+            <div class="div"></div>
+            <div class="between" style="font-size:12.5px;"><span class="lab">Carrier</span><span style="color:${t.carrier.color};font-weight:700;">${t.carrier.name}</span></div>
+            <div class="between" style="font-size:12.5px;margin-top:8px;"><span class="lab">Cost to P1</span><span class="mono">${fmt$0(t.cost)}</span></div>
+            <div class="between" style="font-size:12.5px;margin-top:8px;"><span class="lab">P1 margin</span><span class="mono" style="color:var(--good);">${fmt$0(t.margin)} · ${t.marginPct.toFixed(1)}%</span></div>
+            <div class="lab" style="margin-top:14px;text-transform:none;letter-spacing:0;font-size:10.5px;">Source · Priority1 v2 invoice</div>`;
+        } else if(sel.type==='ship'){
+          const s=sel.s;
+          body.style.padding='0'; body.style.textAlign='left'; body.style.color='var(--ink)';
+          body.innerHTML=`
+            <div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+              <span class="pill" style="background:rgba(34,211,238,0.16);color:#67e8f9;">${s.lane}</span>
+              <span class="pill pill-soft mono">${s.name}</span>
+            </div>
+            <div class="num-lg mono">${fmt$0(s.billed)}</div>
+            <div class="lab" style="text-transform:none;letter-spacing:0;margin-top:2px;font-size:12px;">${portName(s.from)} → ${portName(s.to)}</div>
+            <div class="div"></div>
+            <div class="between" style="font-size:12.5px;"><span class="lab">Containers</span><span class="mono">${s.teu.toLocaleString()} TEU</span></div>
+            <div class="between" style="font-size:12.5px;margin-top:8px;"><span class="lab">FBX 40ft</span><span class="mono">${s.fbx}</span></div>
+            <div class="between" style="font-size:12.5px;margin-top:8px;"><span class="lab">Avg margin</span><span class="mono" style="color:var(--good);">~11%</span></div>
+            <div class="lab" style="margin-top:14px;text-transform:none;letter-spacing:0;font-size:10.5px;">Source · AIS · Freightos FBX · SCFI</div>`;
+        }
+      }
       function tpos(t){const p=t.progress,u=1-p;
         const x=u*u*t.op[0]+2*u*p*t.cp[0]+p*p*t.dp[0];
         const y=u*u*t.op[1]+2*u*p*t.cp[1]+p*p*t.dp[1];
