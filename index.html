@@ -265,7 +265,7 @@ SCREENS.push({title:'Command Center', render: el => {
     </div>`;
   el.innerHTML=`
     <div class="between" style="margin-bottom:6px;"><h1 class="h1">Command Center</h1><span class="pill pill-live">Live · ${ago(new Date(NOW.getTime()-120000))}</span></div>
-    <p class="sub">Your morning briefing for $250M outbound. Spend, performance, leverage, and what needs you today.</p>
+    <p class="sub">Your morning briefing. Spend, performance, leverage, and what needs you today.</p>
     <div class="grid g4" style="margin-bottom:14px;">
       ${KPI('Spend MTD',fmt$0(mtd),'Run-rate $69.5M annual',spendSpark)}
       ${KPI('On-time delivery',onTime.toFixed(1)+'%','+1.1pt vs LM',otpSpark,'#16a34a')}
