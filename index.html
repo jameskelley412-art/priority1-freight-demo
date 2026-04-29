@@ -111,6 +111,20 @@
   .ribbon{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:rgba(251,146,60,.10);color:#fdba74;font-size:11px;font-weight:600;border:1px solid rgba(251,146,60,.30)}
   .ribbon.good{background:rgba(34,197,94,.10);color:#86efac;border-color:rgba(34,197,94,.30)}
   .ribbon.bad{background:rgba(248,113,113,.10);color:#fca5a5;border-color:rgba(248,113,113,.30)}
+  .carrier-row{display:grid;grid-template-columns:1.6fr 1.1fr 0.9fr 0.9fr 0.95fr 0.95fr 0.7fr;align-items:center;gap:14px;padding:16px 18px}
+  .cr-id{display:flex;align-items:center;gap:12px;min-width:0}
+  .cr-cell{min-width:0}
+  .cr-lever{display:flex;justify-content:flex-end}
+  @media(max-width:1100px){
+    .carrier-row{grid-template-columns:1fr 1fr;gap:12px}
+    .cr-lever{grid-column:1 / -1;justify-content:flex-start}
+  }
+  .ticker{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .ticker .live-dot{width:7px;height:7px;border-radius:999px;background:#22c55e;display:inline-block;animation:pulse 1.6s infinite}
+  .arriving{animation:slideIn 0.4s ease-out}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .num-tick{transition:color .25s}
+  .num-tick.flash{color:var(--good)!important}
 </style>
 </head>
 <body>
@@ -520,52 +534,88 @@ SCREENS.push({title:'Spend Pulse', render: el => {
   },50);
 }});
 
+/* compute carrier profiles once at load — derived from invoice aggregate */
+const CARRIER_PROFILES = CARRIERS.slice(0,6).map((c,i)=>{
+  const ships=SHIPMENTS.filter(s=>s.carrier.code===c.code);
+  const spend=ships.reduce((s,x)=>s+x.total,0);
+  const count=ships.length;
+  const miles=ships.reduce((s,x)=>s+x.lane.mi,0);
+  const rpm=miles>0?spend/miles:0;
+  const accLeak=ships.reduce((s,x)=>s+x.accTotal,0);
+  return {c,count,spend,miles,rpm,accLeak,
+    otp:88+(i*1.6)+rnd()*4,
+    claims:+(rnd()*2.4).toFixed(2),
+    vsMkt:+((rnd()-0.5)*16).toFixed(1),
+    csa:{unsafe:rndInt(15,72),maint:rndInt(12,68)},
+    oosRate:+(rnd()*22).toFixed(1),
+    insurance:pick(['Active','Active','Active','Renew 60d']),
+    mc:'MC-'+rndInt(100000,999999),
+    dot:'DOT-'+rndInt(1000000,9999999)
+  };
+}).sort((a,b)=>b.spend-a.spend);
+
 /* ============ 4 · CARRIER POWER ============ */
 SCREENS.push({title:'Carrier Power', render: el => {
-  const stats=CARRIERS.slice(0,6).map((c,i)=>{
-    const ships=SHIPMENTS.filter(s=>s.carrier.code===c.code);
-    const spend=ships.reduce((s,x)=>s+x.total,0);
-    const otp=88+(i*1.6)+rnd()*4;
-    const claims=+(rnd()*2.4).toFixed(2);
-    const vsMkt=+((rnd()-0.5)*16).toFixed(1);
-    const csa={unsafe:rndInt(15,72),maint:rndInt(12,68)};
-    const oosRate=+(rnd()*22).toFixed(1);
-    const insurance=pick(['Active','Active','Active','Renew 60d']);
-    const mc='MC-'+rndInt(100000,999999);
-    const dot='DOT-'+rndInt(1000000,9999999);
-    return {c,count:ships.length,spend,otp,claims,vsMkt,csa,insurance,mc,dot,oosRate};
-  }).sort((a,b)=>b.spend-a.spend);
+  const stats=CARRIER_PROFILES;
   const totalSpend=stats.reduce((s,x)=>s+x.spend,0);
   const pressCount=stats.filter(s=>s.vsMkt>5||s.otp<90||s.csa.unsafe>50).length;
   el.innerHTML=`
-    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Carrier Power</h1><span class="pill pill-soft">Negotiation leverage board</span></div>
-    <p class="sub">Public OSINT plus our internal performance per carrier. The "press here" board for your next QBR.</p>
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Carrier Power</h1><span class="pill pill-soft">Negotiation leverage</span></div>
+    <p class="sub">Spend, share, on-time, market delta, FMCSA, insurance. Aggregated from Priority1 invoices; performance pulled from FMCSA public.</p>
     <div class="grid g3" style="margin-bottom:14px;">
       <div class="card"><span class="lab">Carriers to press</span><div class="num-xl mono delta-up">${pressCount}</div><div class="lab" style="margin-top:4px;">overpaying or underperforming</div></div>
-      <div class="card"><span class="lab">Top carrier share</span><div class="num-xl mono">${(stats[0].spend/totalSpend*100).toFixed(0)}%</div><div class="lab" style="margin-top:4px;">${stats[0].c.name} · concentration risk</div></div>
+      <div class="card"><span class="lab">Top carrier share</span><div class="num-xl mono">${(stats[0].spend/totalSpend*100).toFixed(0)}%</div><div class="lab" style="margin-top:4px;">${stats[0].c.name} · concentration</div></div>
       <div class="card"><span class="lab">FMCSA flags</span><div class="num-xl mono">${stats.filter(s=>s.csa.unsafe>50||s.csa.maint>50).length}</div><div class="lab" style="margin-top:4px;">CSA percentile > 50</div></div>
     </div>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <table>
-        <thead><tr><th>Carrier</th><th>Spend</th><th>vs Market</th><th>On-time</th><th>Claims</th><th>FMCSA CSA</th><th>OOS</th><th>Insurance</th><th>Lever</th></tr></thead>
-        <tbody>${stats.map(s=>{
-          const lever=(s.vsMkt>5||s.otp<90||s.csa.unsafe>50)?'press':(s.vsMkt<-5&&s.otp>92)?'hold':'monitor';
-          return `<tr class="row-hover">
-            <td><div class="row"><span class="legend-dot" style="background:${s.c.color};width:14px;height:14px;"></span><div><b>${s.c.name}</b><div class="lab mono">${s.mc} · ${s.dot}</div></div></div></td>
-            <td class="mono">${fmt$0(s.spend)}<div class="lab">${(s.spend/totalSpend*100).toFixed(0)}% share</div></td>
-            <td class="mono ${s.vsMkt>0?'delta-up':'delta-dn'}">${pct(s.vsMkt,1)}</td>
-            <td><span class="pill ${s.otp>92?'pill-ok':s.otp>88?'pill-warn':'pill-bad'}">${s.otp.toFixed(1)}%</span></td>
-            <td class="mono">${s.claims}%</td>
-            <td><div class="row" style="gap:4px;"><span class="pill ${s.csa.unsafe>50?'pill-bad':s.csa.unsafe>30?'pill-warn':'pill-ok'}" title="Unsafe driving">${s.csa.unsafe}</span><span class="pill ${s.csa.maint>50?'pill-bad':s.csa.maint>30?'pill-warn':'pill-ok'}" title="Maintenance">${s.csa.maint}</span></div></td>
-            <td class="mono">${s.oosRate}%</td>
-            <td>${s.insurance==='Active'?'<span class="pill pill-ok">Active</span>':'<span class="pill pill-warn">Renew 60d</span>'}</td>
-            <td>${lever==='press'?'<span class="pill pill-bad">Press</span>':lever==='hold'?'<span class="pill pill-soft">Hold</span>':'<span class="pill pill-warn">Watch</span>'}</td>
-          </tr>`;
-        }).join('')}
-        </tbody>
-      </table>
+    <div class="stack">
+      ${stats.map(s=>{
+        const lever=(s.vsMkt>5||s.otp<90||s.csa.unsafe>50)?'press':(s.vsMkt<-5&&s.otp>92)?'hold':'monitor';
+        const sharePct=(s.spend/totalSpend*100).toFixed(0);
+        return `
+        <div class="card carrier-row">
+          <div class="cr-id">
+            <div style="width:42px;height:42px;border-radius:10px;background:${s.c.color};color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0;">${s.c.code}</div>
+            <div style="min-width:0;">
+              <div style="font-weight:700;font-size:15px;">${s.c.name}</div>
+              <div class="lab mono">${s.mc} · ${s.dot}</div>
+            </div>
+          </div>
+          <div class="cr-cell">
+            <span class="lab">Spend</span>
+            <div class="num-md mono">${fmt$0(s.spend)}</div>
+            <div class="bar" style="margin-top:6px;"><span style="width:${sharePct}%;background:${s.c.color};"></span></div>
+            <div class="lab mono" style="margin-top:3px;">${sharePct}% · ${s.count} loads</div>
+          </div>
+          <div class="cr-cell">
+            <span class="lab">vs Market</span>
+            <div class="num-md mono ${s.vsMkt>0?'delta-up':'delta-dn'}">${pct(s.vsMkt,1)}</div>
+            <div class="lab mono">${fmt$(s.rpm)}/mi paid</div>
+          </div>
+          <div class="cr-cell">
+            <span class="lab">On-time</span>
+            <div class="num-md mono" style="color:${s.otp>92?'var(--good)':s.otp>88?'var(--warn)':'var(--bad)'};">${s.otp.toFixed(1)}%</div>
+            <div class="lab mono">claims ${s.claims}%</div>
+          </div>
+          <div class="cr-cell">
+            <span class="lab">FMCSA CSA</span>
+            <div class="row" style="gap:4px;margin-top:2px;">
+              <span class="pill ${s.csa.unsafe>50?'pill-bad':s.csa.unsafe>30?'pill-warn':'pill-ok'}" title="Unsafe driving">U${s.csa.unsafe}</span>
+              <span class="pill ${s.csa.maint>50?'pill-bad':s.csa.maint>30?'pill-warn':'pill-ok'}" title="Maintenance">M${s.csa.maint}</span>
+            </div>
+            <div class="lab mono">OOS ${s.oosRate}%</div>
+          </div>
+          <div class="cr-cell">
+            <span class="lab">Insurance</span>
+            <div style="margin-top:2px;">${s.insurance==='Active'?'<span class="pill pill-ok">Active</span>':'<span class="pill pill-warn">Renew 60d</span>'}</div>
+            <div class="lab mono">leak ${fmt$0(s.accLeak)}</div>
+          </div>
+          <div class="cr-lever">
+            <span class="ribbon ${lever==='press'?'bad':lever==='hold'?'good':''}" style="font-size:13px;padding:7px 14px;font-weight:700;">${lever==='press'?'Press':lever==='hold'?'Hold':'Watch'}</span>
+          </div>
+        </div>`;
+      }).join('')}
     </div>
-    <div class="source-tag" style="margin-top:14px;">Sources · <b>FMCSA SAFER + CSA</b> public scores · <b>BLS</b> trucking PPI · cached for demo, live keys wire later</div>
+    <div class="source-tag" style="margin-top:14px;">Sources · <b>Priority1 v2</b> invoices for spend/loads/$mi · <b>FMCSA SAFER + CSA</b> public scores</div>
   `;
 }});
 
@@ -745,6 +795,39 @@ SCREENS.push({title:'Intelligence Feed', render: el => {
     </div>
   `;
 }});
+
+/* reorder so the map opens the deck */
+{
+  const ORDER = ['Network Map','Command Center','Spend Pulse','Carrier Power','Exception Queue','Quote','Intelligence Feed'];
+  const map = Object.fromEntries(SCREENS.map(s=>[s.title,s]));
+  SCREENS.length = 0;
+  ORDER.forEach(t=>{ if(map[t]) SCREENS.push(map[t]); });
+}
+
+/* ---------- live ticker · pulses every visible relative timestamp ---------- */
+setInterval(()=>{
+  document.querySelectorAll('[data-since]').forEach(node=>{
+    const t=parseInt(node.dataset.since,10);
+    if(!isFinite(t))return;
+    const ms=Date.now()-t;
+    const m=Math.round(ms/60000);
+    let txt;
+    if(m<1) txt='just now';
+    else if(m<60) txt=m+'m ago';
+    else if(m<24*60) txt=Math.round(m/60)+'h ago';
+    else txt=Math.round(m/(60*24))+'d ago';
+    if(node.textContent!==txt) node.textContent=txt;
+  });
+  document.querySelectorAll('[data-counter]').forEach(node=>{
+    const target=parseFloat(node.dataset.counter);
+    const cur=parseFloat(node.dataset.current||'0');
+    if(cur<target){
+      const next=Math.min(target, cur+(target-cur)*0.18+1);
+      node.dataset.current=next;
+      node.textContent='$'+Math.round(next).toLocaleString('en-US');
+    }
+  });
+},1500);
 
 /* ---------- carousel ---------- */
 const car=$('car'), dotsEl=$('dots');
