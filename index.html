@@ -569,7 +569,7 @@ SCREENS.push({title:'Network Map', render: el => {
       [...allCities].forEach(c=>{
         const p=proj(COORDS[c]); if(!p)return;
         cityG.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',2.5).attr('fill','#fafafa').attr('stroke','#0a0a0a').attr('stroke-width',1);
-        cityG.append('text').attr('x',p[0]+5).attr('y',p[1]+2).attr('font-size',8.5).attr('font-weight',600).attr('fill','#a1a1aa').attr('font-family','Inter').text(c.split(',')[0]);
+        cityG.append('text').attr('x',p[0]+5).attr('y',p[1]+2).attr('font-size',9).attr('font-weight',600).attr('fill','#d4d4d8').attr('font-family','Inter').attr('paint-order','stroke').attr('stroke','#0a0a0a').attr('stroke-width',2).text(c.split(',')[0]);
       });
       /* truck markers + labels */
       const truckG=svg.append('g'); const truckLabelG=svg.append('g');
