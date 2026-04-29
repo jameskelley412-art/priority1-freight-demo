@@ -752,7 +752,7 @@ SCREENS.push({title:'Spend Pulse', render: el => {
   `;
   setTimeout(()=>{
     new Chart(el.querySelector('#sp1'),{data:{labels:weekLabels,datasets:[
-      {type:'bar',label:'Weekly spend',data:weekly,backgroundColor:weekly.map((_,i)=>i===weekly.length-1?'#fb923c':'#fafafa'),borderRadius:4},
+      {type:'bar',label:'Weekly spend',data:weekly,backgroundColor:weekly.map((_,i)=>i===weekly.length-1?'#fb923c':'#fafafa'),borderRadius:6,borderSkipped:false},
       {type:'line',label:'Target',data:targetLine,borderColor:'#fb923c',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false}
     ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{x:{grid:{color:'#27272a'}},y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#27272a'}}}}});
     new Chart(el.querySelector('#sp2'),{type:'line',data:{labels:EIA_DIESEL.map(d=>d.wk),datasets:[
