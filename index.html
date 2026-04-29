@@ -94,7 +94,9 @@
   th{text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:10px 10px;border-bottom:1px solid var(--line);background:#18181b}
   td{padding:13px 10px;border-bottom:1px solid var(--line2)}
   tr:last-child td{border-bottom:0}
+  tr.row-hover{cursor:pointer;transition:background .12s}
   tr.row-hover:hover td{background:#18181b}
+  tr.row-hover:hover td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
   .bar{height:8px;border-radius:999px;background:#27272a;overflow:hidden}
   .bar > span{display:block;height:100%;border-radius:999px}
   .legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
