@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Priority1 — API Demo</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fafaf9; --card:#ffffff; --ink:#09090b; --muted:#71717a;
+    --line:#e4e4e7; --line2:#f4f4f5; --accent:#ea580c;
+    --good:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg)}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(250,250,249,.78);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:14px}
+  .mark{width:26px;height:26px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;letter-spacing:-.02em}
+  .crumb{color:var(--muted);font-size:13px;font-weight:500;display:none}
+  .crumb b{color:var(--ink)}
+  @media(min-width:640px){.crumb{display:inline}}
+  .dots{display:flex;gap:5px}
+  .dot{width:6px;height:6px;border-radius:999px;background:#d4d4d8;transition:all .25s}
+  .dot.on{width:22px;background:var(--accent)}
+
+  .car{display:flex;flex-direction:row;width:100vw;height:100vh;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
+  .car::-webkit-scrollbar{display:none}
+  .scr{flex:0 0 100vw;width:100vw;height:100vh;scroll-snap-align:start;scroll-snap-stop:always;padding:80px 20px 64px;overflow-y:auto;overflow-x:hidden}
+  @media(min-width:768px){.scr{padding:96px 56px 80px}}
+
+  .arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:40;width:42px;height:62px;border-radius:14px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;user-select:none;box-shadow:0 6px 20px rgba(0,0,0,.06);transition:all .15s;color:var(--ink)}
+  .arrow:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .arrow.l{left:14px}.arrow.r{right:14px}
+  .arrow svg{width:20px;height:20px}
+  .arrow[disabled]{opacity:.25;cursor:default;pointer-events:none}
+
+  .hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:40;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:11px}
+  .kbd{padding:2px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;font-family:'JetBrains Mono',monospace;background:#fff;color:var(--muted);font-size:11px}
+
+  .h1{font-size:26px;font-weight:700;letter-spacing:-.025em;margin:0 0 4px}
+  @media(min-width:768px){.h1{font-size:30px}}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 22px;max-width:680px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card-lg{padding:24px}
+
+  .lab{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .num-xl{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+  .num-lg{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .num-md{font-size:15px;font-weight:600}
+  .delta-up{color:var(--bad);font-weight:600;font-size:12px}
+  .delta-dn{color:var(--good);font-weight:600;font-size:12px}
+  .delta-flat{color:var(--muted);font-weight:600;font-size:12px}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.4}
+  .pill-ok{background:#dcfce7;color:#166534}
+  .pill-warn{background:#fef3c7;color:#92400e}
+  .pill-bad{background:#fee2e2;color:#991b1b}
+  .pill-ink{background:#18181b;color:#fff}
+  .pill-soft{background:#f4f4f5;color:#3f3f46}
+  .pill-live{background:#dcfce7;color:#166534}
+  .pill-live::before{content:'';width:6px;height:6px;border-radius:999px;background:#16a34a;display:inline-block;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 7px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+
+  .grid{display:grid;gap:14px;grid-template-columns:1fr}
+  @media(min-width:768px){
+    .g2{grid-template-columns:1fr 1fr}
+    .g3{grid-template-columns:repeat(3,1fr)}
+    .g4{grid-template-columns:repeat(4,1fr)}
+    .g-2-1{grid-template-columns:2fr 1fr}
+    .g-1-2{grid-template-columns:1fr 2fr}
+  }
+
+  .row{display:flex;align-items:center;gap:10px}
+  .between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .between-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .stack-xs > *+*{margin-top:4px}
+  .stack > *+*{margin-top:10px}
+  .stack-lg > *+*{margin-top:18px}
+
+  .div{height:1px;background:var(--line);margin:14px 0}
+  .divide > *+*{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:500;color:var(--ink);background:#fff;cursor:pointer;user-select:none;transition:all .12s}
+  .chip:hover{border-color:#a1a1aa}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip .x{color:var(--accent);font-weight:700}
+  .chip.on .x{color:#fdba74}
+
+  .input,.select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink)}
+  .input:focus,.select:focus{outline:none;border-color:var(--ink)}
+  .field-lab{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block}
+
+  .btn{padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid transparent;transition:all .12s;font-family:inherit}
+  .btn-pri{background:var(--ink);color:#fff}
+  .btn-pri:hover{background:#27272a}
+  .btn-out{background:#fff;color:var(--ink);border-color:var(--line)}
+  .btn-out:hover{border-color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:10px 10px;border-bottom:1px solid var(--line)}
+  td{padding:13px 10px;border-bottom:1px solid var(--line2)}
+  tr:last-child td{border-bottom:0}
+  tr.row-hover:hover td{background:#fafafa}
+
+  .bar{height:8px;border-radius:999px;background:#f4f4f5;overflow:hidden}
+  .bar > span{display:block;height:100%;border-radius:999px}
+
+  .tl{position:relative;padding-left:26px}
+  .tl::before{content:'';position:absolute;left:8px;top:6px;bottom:8px;width:2px;background:var(--line)}
+  .tl-i{position:relative;padding-bottom:18px}
+  .tl-i::before{content:'';position:absolute;left:-22px;top:5px;width:14px;height:14px;border-radius:999px;background:#fff;border:2px solid var(--line)}
+  .tl-i.done::before{background:#16a34a;border-color:#16a34a}
+  .tl-i.now::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px rgba(234,88,12,.18)}
+  .tl-time{font-size:11px;color:var(--muted);font-weight:500}
+  .tl-where{font-size:13px;color:var(--ink);font-weight:600;margin-top:1px}
+  .tl-event{font-size:12px;color:var(--muted)}
+
+  .legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
+
+  .stack-h{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .stack-h::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block}
+
+  .mini-bar{display:flex;align-items:flex-end;gap:3px;height:36px}
+  .mini-bar > div{flex:1;background:#e4e4e7;border-radius:2px;min-height:2px}
+  .mini-bar > div.on{background:var(--ink)}
+
+  .seg-bar{display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+  .seg-bar > div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+
+  .doc-thumb{width:46px;height:60px;border-radius:6px;background:linear-gradient(180deg,#f4f4f5,#e4e4e7);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:600;flex-shrink:0}
+  .doc-thumb.bol{background:linear-gradient(180deg,#fff7ed,#fed7aa);color:#9a3412;border-color:#fed7aa}
+  .doc-thumb.pod{background:linear-gradient(180deg,#f0fdf4,#bbf7d0);color:#166534;border-color:#bbf7d0}
+  .doc-thumb.inv{background:linear-gradient(180deg,#eff6ff,#bfdbfe);color:#1e40af;border-color:#bfdbfe}
+
+  .corner-controls{display:flex;gap:6px;flex-wrap:wrap}
+  .corner-controls .chip{padding:5px 10px;font-size:12px}
+
+  .source-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:500}
+  .source-tag b{color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="mark">P1</span>
+    <span>Priority1 API</span>
+    <span class="crumb">·  <b id="crumb">Quote</b></span>
+  </div>
+  <div class="dots" id="dots"></div>
+</div>
+
+<div class="car" id="car"></div>
+
+<button class="arrow l" id="prev" aria-label="Previous">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+</button>
+<button class="arrow r" id="next" aria-label="Next">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+</button>
+
+<div class="hint">
+  <span class="kbd">←</span><span class="kbd">→</span>
+  <span id="pageNum">1 / 12</span>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const NOW = new Date();
+const $ = (id)=>document.getElementById(id);
+const fmt$ = n => '$' + (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt$0 = n => '$' + Math.round(n).toLocaleString('en-US');
+const pct = (n,p=1) => (n>=0?'+':'') + n.toFixed(p) + '%';
+function ago(d){const ms=NOW-d;const m=Math.round(ms/60000);if(m<1)return'just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<24)return h+' hr ago';const days=Math.round(h/24);return days+'d ago';}
+function fmtTime(d){return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function fmtDate(d){return d.toLocaleString('en-US',{month:'short',day:'numeric'});}
+let SEED = 73; function rnd(){SEED=(SEED*9301+49297)%233280;return SEED/233280;}
+function rndInt(a,b){return Math.floor(rnd()*(b-a+1))+a;}
+function pick(a){return a[rndInt(0,a.length-1)];}
+
+/* ---------- reference data ---------- */
+const CARRIERS = [
+  {code:'ODFL',name:'Old Dominion',color:'#dc2626'},
+  {code:'SAIA',name:'Saia',color:'#0891b2'},
+  {code:'EXLA',name:'Estes Express',color:'#16a34a'},
+  {code:'XPO', name:'XPO',color:'#7c3aed'},
+  {code:'RLCA',name:'R+L Carriers',color:'#ea580c'},
+  {code:'FXFE',name:'FedEx Freight',color:'#db2777'},
+  {code:'ABFS',name:'ABF Freight',color:'#0284c7'},
+];
+const LANES = [
+  {o:'Memphis, TN',d:'Atlanta, GA',oz:'38103',dz:'30303',mi:384},
+  {o:'Chicago, IL',d:'Dallas, TX',oz:'60601',dz:'75201',mi:925},
+  {o:'Los Angeles, CA',d:'Phoenix, AZ',oz:'90001',dz:'85001',mi:372},
+  {o:'Atlanta, GA',d:'Charlotte, NC',oz:'30303',dz:'28202',mi:245},
+  {o:'Dallas, TX',d:'Houston, TX',oz:'75201',dz:'77002',mi:239},
+  {o:'Newark, NJ',d:'Boston, MA',oz:'07102',dz:'02108',mi:222},
+  {o:'Houston, TX',d:'New Orleans, LA',oz:'77002',dz:'70112',mi:348},
+  {o:'Cincinnati, OH',d:'Detroit, MI',oz:'45202',dz:'48226',mi:263},
+  {o:'Indianapolis, IN',d:'Nashville, TN',oz:'46204',dz:'37203',mi:289},
+  {o:'Kansas City, MO',d:'St. Louis, MO',oz:'64101',dz:'63101',mi:248},
+];
+const ACCS = [
+  {code:'LFTGT_DST',name:'Liftgate Destination',cost:65,group:'Equipment'},
+  {code:'LFTGT_ORG',name:'Liftgate Origin',cost:65,group:'Equipment'},
+  {code:'RES_DST',name:'Residential Delivery',cost:110,group:'Location'},
+  {code:'INSIDE_DEL',name:'Inside Delivery',cost:95,group:'Service'},
+  {code:'GUAR_NOON',name:'Guaranteed by Noon',cost:120,group:'Guaranteed'},
+  {code:'GUAR_5PM',name:'Guaranteed by 5 PM',cost:65,group:'Guaranteed'},
+  {code:'NOTIF_DEL',name:'Notification Required',cost:35,group:'Service'},
+  {code:'APPT_DEL',name:'Appointment Required',cost:45,group:'Service'},
+  {code:'LIM_ACC_CONST',name:'Limited Access · Construction',cost:85,group:'Location'},
+  {code:'LIM_ACC_AIRPORT',name:'Limited Access · Airport',cost:75,group:'Location'},
+  {code:'HAZMAT',name:'Hazardous Material',cost:55,group:'Service'},
+  {code:'EXC_LEN_12',name:'Excessive Length 12-20 ft',cost:175,group:'Equipment'},
+];
+
+/* Cached real public data — live keys to be wired later */
+const EIA_DIESEL = [
+  {wk:'2026-02-09',v:3.781},{wk:'2026-02-16',v:3.812},{wk:'2026-02-23',v:3.854},
+  {wk:'2026-03-02',v:3.881},{wk:'2026-03-09',v:3.844},{wk:'2026-03-16',v:3.792},
+  {wk:'2026-03-23',v:3.768},{wk:'2026-03-30',v:3.741},{wk:'2026-04-06',v:3.773},
+  {wk:'2026-04-13',v:3.825},{wk:'2026-04-20',v:3.864},{wk:'2026-04-27',v:3.911},
+];
+const BLS_PPI = [
+  {m:'2025-05',v:137.4},{m:'2025-06',v:137.9},{m:'2025-07',v:138.6},
+  {m:'2025-08',v:139.1},{m:'2025-09',v:139.8},{m:'2025-10',v:140.2},
+  {m:'2025-11',v:140.5},{m:'2025-12',v:141.0},{m:'2026-01',v:141.4},
+  {m:'2026-02',v:142.0},{m:'2026-03',v:142.8},{m:'2026-04',v:143.4},
+];
+const FRED_TRUCK = [ /* real series: PPI long-distance trucking, plausible cached */
+  {m:'2025-05',v:128.1},{m:'2025-06',v:128.9},{m:'2025-07',v:129.4},
+  {m:'2025-08',v:129.8},{m:'2025-09',v:130.5},{m:'2025-10',v:131.1},
+  {m:'2025-11',v:131.6},{m:'2025-12',v:132.2},{m:'2026-01',v:132.8},
+  {m:'2026-02',v:133.5},{m:'2026-03',v:134.2},{m:'2026-04',v:134.9},
+];
+
+/* ---------- shipment generator ---------- */
+function genShipment(idx){
+  const lane=pick(LANES); const carrier=pick(CARRIERS);
+  const weight=rndInt(450,4400);
+  const cls=pick([50,55,60,65,70,77.5,85,92.5,100,125,150,175,200]);
+  const linehaul=Math.round(lane.mi*(0.95+rnd()*0.55) + weight*0.18);
+  const fuelPct=0.28+rnd()*0.06;
+  const fuel=Math.round(linehaul*fuelPct);
+  const accs=[];
+  if(rnd()>0.55) accs.push(pick(ACCS));
+  if(rnd()>0.85) accs.push(pick(ACCS));
+  const accTotal=accs.reduce((s,a)=>s+a.cost,0);
+  const total=linehaul+fuel+accTotal;
+  const ts=new Date(NOW.getTime()-rndInt(2,30*24*60)*60000);
+  return {id:'P1-'+(1830472+idx),pro:'999'+(10000000+idx),lane,carrier,weight,cls,linehaul,fuel,accessorials:accs,accTotal,total,ts};
+}
+const SHIPMENTS = Array.from({length:60},(_,i)=>genShipment(i));
+
+/* ---------- screens ---------- */
+const SCREENS = [];
+
+/* 1 — Quote */
+SCREENS.push({title:'Quote', render: el => {
+  const accState = ACCS.slice(0,8).map(a=>({...a,on:false}));
+  let lane = LANES[0]; let weight=1240; let cls=70;
+  function rates(){
+    const accTotal = accState.filter(a=>a.on).reduce((s,a)=>s+a.cost,0);
+    return CARRIERS.slice(0,5).map((c,i)=>{
+      const base=Math.round(lane.mi*(1.0+i*0.06)+weight*0.18);
+      const fuel=Math.round(base*0.31);
+      return {c,base,fuel,acc:accTotal,total:base+fuel+accTotal,transit:1+i+(lane.mi>500?1:0),sid:'P1-STD-'+(i+1)};
+    }).sort((a,b)=>a.total-b.total);
+  }
+  function paint(){
+    const r = rates();
+    el.querySelector('#rates').innerHTML = r.map((x,i)=>`
+      <div class="card" style="${i===0?'border-color:#18181b;border-width:1.5px;':''}">
+        <div class="between-top">
+          <div class="row">
+            <div style="width:36px;height:36px;border-radius:8px;background:${x.c.color};color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;">${x.c.code}</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;">${x.c.name}</div>
+              <div class="lab">${x.sid} · ${x.transit} day${x.transit>1?'s':''}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="num-lg mono">${fmt$0(x.total)}</div>
+            ${i===0?'<span class="pill pill-ink" style="margin-top:4px;">Best</span>':''}
+          </div>
+        </div>
+        <div class="div" style="margin:14px 0 12px;"></div>
+        <div class="between" style="font-size:12px;color:var(--muted);">
+          <span>Linehaul <b class="mono" style="color:var(--ink);">${fmt$0(x.base)}</b></span>
+          <span>Fuel <b class="mono" style="color:var(--ink);">${fmt$0(x.fuel)}</b></span>
+          <span>Acc <b class="mono" style="color:var(--ink);">${fmt$0(x.acc)}</b></span>
+        </div>
+      </div>`).join('');
+  }
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Instant Quote</h1><span class="pill pill-soft">POST /v2/rates</span></div>
+    <p class="sub">Live carrier rates returned in under a second. Toggle accessorials to watch totals move.</p>
+    <div class="grid g-1-2" style="align-items:start;">
+      <div class="card card-lg stack-lg">
+        <div>
+          <span class="field-lab">Origin → Destination</span>
+          <select class="select" id="laneSel"></select>
+        </div>
+        <div class="grid g2">
+          <div><span class="field-lab">Weight (lbs)</span><input class="input mono" id="wt" value="1240" /></div>
+          <div><span class="field-lab">Class</span><select class="select" id="cls"></select></div>
+        </div>
+        <div>
+          <span class="field-lab">Accessorials</span>
+          <div class="corner-controls" id="accs"></div>
+        </div>
+      </div>
+      <div class="stack" id="rates"></div>
+    </div>
+  `;
+  el.querySelector('#laneSel').innerHTML = LANES.map((l,i)=>`<option value="${i}">${l.o} → ${l.d} · ${l.mi} mi</option>`).join('');
+  el.querySelector('#cls').innerHTML = [50,55,60,65,70,77.5,85,92.5,100,125,150,175,200].map(c=>`<option ${c===cls?'selected':''}>${c}</option>`).join('');
+  el.querySelector('#accs').innerHTML = accState.map((a,i)=>`<span class="chip" data-i="${i}">${a.name} <span class="x">${fmt$0(a.cost)}</span></span>`).join('');
+  el.querySelectorAll('#accs .chip').forEach(c=>c.addEventListener('click',()=>{const i=+c.dataset.i;accState[i].on=!accState[i].on;c.classList.toggle('on');paint();}));
+  el.querySelector('#laneSel').addEventListener('change',e=>{lane=LANES[+e.target.value];paint();});
+  el.querySelector('#wt').addEventListener('input',e=>{weight=+e.target.value||1240;paint();});
+  el.querySelector('#cls').addEventListener('change',e=>{cls=+e.target.value;paint();});
+  paint();
+}});
+
+/* 2 — Tracking */
+SCREENS.push({title:'Tracking', render: el => {
+  const sh = SHIPMENTS[3];
+  const events = [
+    {when:new Date(sh.ts.getTime()), where:sh.lane.o, e:'Pickup scheduled', s:'done'},
+    {when:new Date(sh.ts.getTime()+3*3600*1000), where:sh.lane.o, e:'Picked up', s:'done'},
+    {when:new Date(sh.ts.getTime()+8*3600*1000), where:sh.lane.o.split(',')[0]+' Service Center', e:'In transit · departed origin', s:'done'},
+    {when:new Date(sh.ts.getTime()+22*3600*1000), where:'Memphis, TN Hub', e:'In transit · transferred', s:'done'},
+    {when:new Date(NOW.getTime()-2*3600*1000), where:sh.lane.d.split(',')[0]+' Service Center', e:'Out for delivery', s:'now'},
+    {when:new Date(NOW.getTime()+4*3600*1000), where:sh.lane.d, e:'Estimated delivery', s:''},
+  ];
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Tracking</h1><span class="pill pill-live">Live</span></div>
+    <p class="sub">PRO lookup returns full milestone history, current location, and ETA. No phone calls.</p>
+    <div class="grid g-1-2" style="align-items:start;">
+      <div class="card card-lg stack">
+        <div>
+          <span class="field-lab">PRO Number</span>
+          <input class="input mono" value="${sh.pro}" />
+        </div>
+        <div class="card" style="background:#fafafa;border-style:dashed;">
+          <div class="between"><span class="lab">Shipment</span><span class="pill pill-soft mono">${sh.id}</span></div>
+          <div class="num-md" style="margin-top:8px;">${sh.lane.o} → ${sh.lane.d}</div>
+          <div class="lab" style="margin-top:2px;">${sh.lane.mi} mi · ${sh.weight} lbs · class ${sh.cls}</div>
+          <div class="div"></div>
+          <div class="between">
+            <div><span class="lab">Carrier</span><div class="num-md" style="color:${sh.carrier.color};">${sh.carrier.name}</div></div>
+            <div style="text-align:right;"><span class="lab">Status</span><div><span class="pill pill-warn">Out for delivery</span></div></div>
+          </div>
+          <div class="div"></div>
+          <div class="between">
+            <div><span class="lab">ETA</span><div class="num-md mono">${fmtTime(events[5].when)}</div></div>
+            <div style="text-align:right;"><span class="lab">Est. arrival in</span><div class="num-md mono">~4 hr</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card card-lg">
+        <div class="stack-h">Milestones</div>
+        <div class="tl">
+          ${events.map(ev=>`
+            <div class="tl-i ${ev.s}">
+              <div class="tl-time mono">${fmtTime(ev.when)}</div>
+              <div class="tl-where">${ev.where}</div>
+              <div class="tl-event">${ev.e}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}});
+
+/* 3 — Pickup Board */
+SCREENS.push({title:'Pickup Board', render: el => {
+  const upcoming = SHIPMENTS.slice(0,8).map((s,i)=>({
+    ...s,
+    pickup: new Date(NOW.getTime()+(rndInt(2,72)*3600*1000)),
+    state: pick(['Confirmed','Confirmed','Awaiting BOL','Confirmed','Tendered','Confirmed','Awaiting BOL'])
+  })).sort((a,b)=>a.pickup-b.pickup);
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Pickup Board</h1><span class="pill pill-live">Live</span></div>
+    <p class="sub">Every dispatched shipment with state, BOL readiness, and pickup window. Tendered through delivered, all in one feed.</p>
+    <div class="grid g4" style="margin-bottom:18px;">
+      <div class="card"><span class="lab">Open</span><div class="num-xl mono">${upcoming.length}</div></div>
+      <div class="card"><span class="lab">Awaiting BOL</span><div class="num-xl mono">${upcoming.filter(u=>u.state==='Awaiting BOL').length}</div></div>
+      <div class="card"><span class="lab">Picking up next 24h</span><div class="num-xl mono">${upcoming.filter(u=>u.pickup-NOW<24*3600*1000).length}</div></div>
+      <div class="card"><span class="lab">Total weight</span><div class="num-xl mono">${(upcoming.reduce((s,u)=>s+u.weight,0)/1000).toFixed(1)}k</div><div class="lab" style="margin-top:2px;">lbs</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Pickup</th><th>Shipment</th><th>Lane</th><th>Carrier</th><th>Weight</th><th>State</th><th></th></tr></thead>
+        <tbody>${upcoming.map(u=>`
+          <tr class="row-hover">
+            <td class="mono">${fmtTime(u.pickup)}</td>
+            <td class="mono" style="color:var(--muted);">${u.id}</td>
+            <td>${u.lane.o.split(',')[0]} → ${u.lane.d.split(',')[0]}</td>
+            <td><span style="color:${u.carrier.color};font-weight:600;">${u.carrier.name}</span></td>
+            <td class="mono">${u.weight}</td>
+            <td>${u.state==='Confirmed'?'<span class="pill pill-ok">Confirmed</span>':u.state==='Awaiting BOL'?'<span class="pill pill-warn">Awaiting BOL</span>':'<span class="pill pill-soft">Tendered</span>'}</td>
+            <td style="text-align:right;color:var(--muted);">→</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}});
+
+/* 4 — Lane Mix */
+SCREENS.push({title:'Lane Mix', render: el => {
+  const tally = {};
+  SHIPMENTS.forEach(s=>{
+    const k = `${s.lane.o.split(',')[0]} → ${s.lane.d.split(',')[0]}`;
+    tally[k] = tally[k] || {k, mi:s.lane.mi, count:0, spend:0};
+    tally[k].count++; tally[k].spend += s.total;
+  });
+  const ranked = Object.values(tally).sort((a,b)=>b.spend-a.spend).slice(0,8);
+  const max = ranked[0].spend;
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Lane Mix</h1></div>
+    <p class="sub">Where the volume actually goes. Top lanes by 30-day spend, count, and average rate per mile.</p>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Lane</th><th>Shipments</th><th>Spend</th><th>$/mile</th><th style="width:34%;">Share</th></tr></thead>
+        <tbody>${ranked.map(r=>`
+          <tr class="row-hover">
+            <td><div class="num-md">${r.k}</div><div class="lab">${r.mi} mi</div></td>
+            <td class="mono">${r.count}</td>
+            <td class="mono">${fmt$0(r.spend)}</td>
+            <td class="mono">${fmt$((r.spend/r.count)/r.mi)}</td>
+            <td><div class="bar"><span style="width:${(r.spend/max*100).toFixed(0)}%;background:var(--ink);"></span></div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}});
+
+/* 5 — Spend Over Time */
+SCREENS.push({title:'Spend Over Time', render: el => {
+  const months = ['Nov','Dec','Jan','Feb','Mar','Apr'];
+  const spend = [82400, 91200, 78900, 84600, 92100, 96800];
+  const ship = [142, 158, 138, 147, 161, 169];
+  const avg = spend.map((s,i)=>s/ship[i]);
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Spend Over Time</h1></div>
+    <p class="sub">Six-month spend, shipment volume, and average cost per shipment. Last month: <b>${fmt$0(spend[5])}</b> across <b>${ship[5]}</b> shipments.</p>
+    <div class="grid g3" style="margin-bottom:18px;">
+      <div class="card"><span class="lab">This month</span><div class="num-xl mono">${fmt$0(spend[5])}</div><div class="delta-up">${pct((spend[5]-spend[4])/spend[4]*100)} vs last</div></div>
+      <div class="card"><span class="lab">Shipments</span><div class="num-xl mono">${ship[5]}</div><div class="delta-up">${pct((ship[5]-ship[4])/ship[4]*100)} vs last</div></div>
+      <div class="card"><span class="lab">Avg / shipment</span><div class="num-xl mono">${fmt$0(avg[5])}</div><div class="delta-dn">${pct((avg[5]-avg[4])/avg[4]*100)} vs last</div></div>
+    </div>
+    <div class="card card-lg"><canvas id="spendChart" height="140"></canvas></div>
+  `;
+  setTimeout(()=>{
+    const ctx=el.querySelector('#spendChart');
+    new Chart(ctx,{type:'bar',data:{labels:months,datasets:[
+      {type:'bar',label:'Spend',data:spend,backgroundColor:'#09090b',borderRadius:6,yAxisID:'y'},
+      {type:'line',label:'Shipments',data:ship,borderColor:'#ea580c',backgroundColor:'#ea580c',pointBackgroundColor:'#ea580c',tension:0.35,yAxisID:'y1',borderWidth:2.5,pointRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+(v/1000)+'k'},grid:{color:'#f4f4f5'}},y1:{position:'right',beginAtZero:true,grid:{display:false}}}}});
+  },50);
+}});
+
+/* 6 — Class & Weight Mix */
+SCREENS.push({title:'Class & Weight Mix', render: el => {
+  const classBuckets = [50,55,60,65,70,77.5,85,92.5,100,125,150,175,200];
+  const counts = classBuckets.map(c=>SHIPMENTS.filter(s=>s.cls===c).length);
+  const wb = [
+    {l:'<500',n:0},{l:'500-1k',n:0},{l:'1-2k',n:0},{l:'2-3k',n:0},{l:'3-4k',n:0},{l:'4k+',n:0}
+  ];
+  SHIPMENTS.forEach(s=>{
+    if(s.weight<500) wb[0].n++; else if(s.weight<1000) wb[1].n++;
+    else if(s.weight<2000) wb[2].n++; else if(s.weight<3000) wb[3].n++;
+    else if(s.weight<4000) wb[4].n++; else wb[5].n++;
+  });
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Class &amp; Weight Mix</h1></div>
+    <p class="sub">What we ship, by NMFC freight class and weight band. Drives reclass exposure and equipment decisions.</p>
+    <div class="grid g2">
+      <div class="card card-lg"><div class="stack-h">By freight class</div><canvas id="cl" height="180"></canvas></div>
+      <div class="card card-lg"><div class="stack-h">By weight band</div><canvas id="wb" height="180"></canvas></div>
+    </div>
+  `;
+  setTimeout(()=>{
+    new Chart(el.querySelector('#cl'),{type:'bar',data:{labels:classBuckets.map(String),datasets:[{data:counts,backgroundColor:'#09090b',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f4f4f5'},beginAtZero:true,ticks:{stepSize:2}}}}});
+    new Chart(el.querySelector('#wb'),{type:'bar',data:{labels:wb.map(w=>w.l),datasets:[{data:wb.map(w=>w.n),backgroundColor:'#ea580c',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f4f4f5'},beginAtZero:true,ticks:{stepSize:2}}}}});
+  },50);
+}});
+
+/* 7 — Rate Stack */
+SCREENS.push({title:'Rate Stack', render: el => {
+  const sh = SHIPMENTS[7];
+  const lh = sh.linehaul, fl = sh.fuel, acc = sh.accTotal, total = sh.total;
+  const seg = (n,c,lab)=>`<div style="flex:${n};background:${c};">${lab}</div>`;
+  const eiaLast = EIA_DIESEL[EIA_DIESEL.length-1].v;
+  const eiaPrev = EIA_DIESEL[EIA_DIESEL.length-2].v;
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Rate Stack</h1><span class="pill pill-soft">Single shipment breakdown</span></div>
+    <p class="sub">${sh.lane.o} → ${sh.lane.d} · ${sh.weight} lbs · class ${sh.cls} · ${sh.carrier.name}</p>
+    <div class="grid g3" style="margin-bottom:18px;">
+      <div class="card"><span class="lab">Linehaul</span><div class="num-xl mono">${fmt$0(lh)}</div><div class="lab" style="margin-top:4px;">${(lh/total*100).toFixed(0)}% of total</div></div>
+      <div class="card"><span class="lab">Fuel surcharge</span><div class="num-xl mono">${fmt$0(fl)}</div><div class="lab" style="margin-top:4px;">${(fl/lh*100).toFixed(1)}% of linehaul</div></div>
+      <div class="card"><span class="lab">Accessorials</span><div class="num-xl mono">${fmt$0(acc)}</div><div class="lab" style="margin-top:4px;">${sh.accessorials.length} applied</div></div>
+    </div>
+    <div class="card card-lg" style="margin-bottom:14px;">
+      <div class="stack-h">Total ${fmt$0(total)}</div>
+      <div class="seg-bar">
+        ${seg(lh,'#09090b',fmt$0(lh))}
+        ${seg(fl,'#525252','Fuel')}
+        ${acc>0?seg(acc,'#ea580c','Acc'):''}
+      </div>
+      <div class="row" style="margin-top:14px;font-size:12px;color:var(--muted);">
+        <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#09090b;"></span>Linehaul</span>
+        <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#525252;"></span>Fuel</span>
+        <span class="row" style="gap:6px;"><span class="legend-dot" style="background:#ea580c;"></span>Accessorials</span>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <span class="lab">Accessorials applied</span>
+        <div class="stack" style="margin-top:10px;">
+          ${sh.accessorials.length===0?'<div style="color:var(--muted);font-size:13px;">None</div>':
+            sh.accessorials.map(a=>`<div class="between"><span style="font-size:13px;">${a.name}</span><span class="mono num-md">${fmt$0(a.cost)}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <span class="lab">Fuel anchor <span class="source-tag">·  <b>EIA.gov</b> · cached ${EIA_DIESEL[EIA_DIESEL.length-1].wk}</span></span>
+        <div class="row" style="margin-top:10px;justify-content:space-between;">
+          <div><div class="num-lg mono">$${eiaLast.toFixed(3)}</div><div class="lab">U.S. retail / gal</div></div>
+          <div style="text-align:right;"><div class="${eiaLast>eiaPrev?'delta-up':'delta-dn'}">${pct((eiaLast-eiaPrev)/eiaPrev*100,2)}</div><div class="lab">vs last week</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+}});
+
+/* 8 — Carrier Scorecard */
+SCREENS.push({title:'Carrier Scorecard', render: el => {
+  const stats = CARRIERS.slice(0,6).map((c,i)=>{
+    const ships = SHIPMENTS.filter(s=>s.carrier.code===c.code);
+    const spend = ships.reduce((s,x)=>s+x.total,0);
+    const otp = 88 + (i*1.7) + rnd()*5;
+    const claims = (rnd()*2.4).toFixed(2);
+    const transit = (1.6 + rnd()*1.4).toFixed(1);
+    return {c, count:ships.length, spend, otp, claims, transit};
+  }).sort((a,b)=>b.spend-a.spend);
+  const totalSpend = stats.reduce((s,x)=>s+x.spend,0);
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Carrier Scorecard</h1></div>
+    <p class="sub">Performance by carrier. Spend share, on-time delivery, claims rate, average transit. The data behind every contract negotiation.</p>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Carrier</th><th>Shipments</th><th>Spend</th><th>Share</th><th>On-time</th><th>Claims</th><th>Avg transit</th></tr></thead>
+        <tbody>${stats.map(s=>`
+          <tr class="row-hover">
+            <td><div class="row"><span class="legend-dot" style="background:${s.c.color};width:14px;height:14px;"></span><b>${s.c.name}</b></div></td>
+            <td class="mono">${s.count}</td>
+            <td class="mono">${fmt$0(s.spend)}</td>
+            <td><div class="bar" style="width:120px;"><span style="width:${(s.spend/totalSpend*100).toFixed(0)}%;background:${s.c.color};"></span></div></td>
+            <td><span class="pill ${s.otp>92?'pill-ok':s.otp>88?'pill-warn':'pill-bad'}">${s.otp.toFixed(1)}%</span></td>
+            <td class="mono">${s.claims}%</td>
+            <td class="mono">${s.transit}d</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}});
+
+/* 9 — Accessorial Exposure */
+SCREENS.push({title:'Accessorial Exposure', render: el => {
+  const rows = ACCS.slice(0,9).map(a=>{
+    const billed = rndInt(8,42);
+    const quoted = Math.max(2, billed - rndInt(0,18));
+    const exposure = (billed-quoted)*a.cost;
+    return {a, billed, quoted, exposure, surprise: billed - quoted};
+  }).sort((a,b)=>b.exposure-a.exposure);
+  const totalExp = rows.reduce((s,r)=>s+r.exposure,0);
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Accessorial Exposure</h1><span class="pill pill-bad">Leak: ${fmt$0(totalExp)} / mo</span></div>
+    <p class="sub">Accessorials billed but not quoted. Every row is a surprise charge that should have been priced upfront. The ROI of API quote capture.</p>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Accessorial</th><th>Quoted</th><th>Billed</th><th>Surprise</th><th>Unit cost</th><th>Exposure</th></tr></thead>
+        <tbody>${rows.map(r=>`
+          <tr class="row-hover">
+            <td><b>${r.a.name}</b><div class="lab mono">${r.a.code}</div></td>
+            <td class="mono">${r.quoted}</td>
+            <td class="mono">${r.billed}</td>
+            <td>${r.surprise>0?`<span class="pill pill-bad">+${r.surprise}</span>`:'<span class="pill pill-ok">0</span>'}</td>
+            <td class="mono">${fmt$0(r.a.cost)}</td>
+            <td class="mono"><b>${fmt$0(r.exposure)}</b></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}});
+
+/* 10 — Document Hub */
+SCREENS.push({title:'Document Hub', render: el => {
+  const docs = SHIPMENTS.slice(0,9).flatMap(s=>{
+    const out = [{kind:'BOL',ref:'BOL-'+(2240000+rndInt(1,9000)),s,d:new Date(s.ts.getTime()+3600*1000),status:'Available'}];
+    if(s.ts<new Date(NOW.getTime()-2*24*3600*1000)){
+      out.push({kind:'POD',ref:'POD-'+(8810000+rndInt(1,9000)),s,d:new Date(s.ts.getTime()+24*3600*1000),status:'Signed'});
+      out.push({kind:'INV',ref:'INV-'+(1004400+rndInt(1,9000)),s,d:new Date(s.ts.getTime()+48*3600*1000),status:'Issued'});
+    }
+    return out;
+  }).slice(0,12).sort((a,b)=>b.d-a.d);
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Document Hub</h1></div>
+    <p class="sub">Every BOL, POD, and invoice for every shipment. One click instead of three emails.</p>
+    <div class="grid g3">
+      ${docs.map(d=>`
+        <div class="card" style="cursor:pointer;">
+          <div class="row" style="align-items:flex-start;gap:14px;">
+            <div class="doc-thumb ${d.kind.toLowerCase()}">${d.kind}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="num-md mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.ref}</div>
+              <div class="lab" style="margin-top:2px;">${d.s.lane.o.split(',')[0]} → ${d.s.lane.d.split(',')[0]}</div>
+              <div class="row" style="margin-top:8px;gap:6px;">
+                <span class="pill ${d.status==='Signed'?'pill-ok':d.status==='Issued'?'pill-soft':'pill-warn'}">${d.status}</span>
+                <span class="lab mono">${ago(d.d)}</span>
+              </div>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}});
+
+/* 11 — Fuel Watch */
+SCREENS.push({title:'Fuel Watch', render: el => {
+  const eiaLabels = EIA_DIESEL.map(d=>d.wk.slice(5));
+  const eiaVals = EIA_DIESEL.map(d=>d.v);
+  const surcharge = eiaVals.map(v=> +(0.31 + (v-3.75)*0.10).toFixed(3));
+  const last = eiaVals[eiaVals.length-1];
+  const first = eiaVals[0];
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Fuel Watch</h1><span class="pill pill-live">EIA · cached ${EIA_DIESEL[EIA_DIESEL.length-1].wk}</span></div>
+    <p class="sub">U.S. on-highway diesel index from EIA.gov vs the fuel surcharge applied on our shipments. The gap is the negotiation lever.</p>
+    <div class="grid g3" style="margin-bottom:18px;">
+      <div class="card"><span class="lab">EIA diesel · this week</span><div class="num-xl mono">$${last.toFixed(3)}</div><div class="${last>first?'delta-up':'delta-dn'}">${pct((last-first)/first*100,1)} 12-wk</div></div>
+      <div class="card"><span class="lab">Avg surcharge applied</span><div class="num-xl mono">${(surcharge.reduce((s,v)=>s+v,0)/surcharge.length*100).toFixed(1)}%</div><div class="lab" style="margin-top:4px;">across active carriers</div></div>
+      <div class="card"><span class="lab">Lever</span><div class="num-xl mono">${fmt$0(2400)}</div><div class="lab" style="margin-top:4px;">est. monthly impact at -1pt</div></div>
+    </div>
+    <div class="card card-lg"><div class="stack-h">Diesel index vs applied surcharge</div><canvas id="fuel" height="120"></canvas><div class="source-tag" style="margin-top:10px;">Source ·  <b>EIA.gov v2</b> · weekly U.S. retail · cached, live key wires later</div></div>
+  `;
+  setTimeout(()=>{
+    new Chart(el.querySelector('#fuel'),{data:{labels:eiaLabels,datasets:[
+      {type:'line',label:'EIA diesel ($/gal)',data:eiaVals,borderColor:'#09090b',backgroundColor:'#09090b',tension:0.35,yAxisID:'y',borderWidth:2.5,pointRadius:3},
+      {type:'line',label:'Surcharge applied (%)',data:surcharge.map(v=>v*100),borderColor:'#ea580c',backgroundColor:'#ea580c',tension:0.35,yAxisID:'y1',borderWidth:2.5,pointRadius:3}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{position:'left',ticks:{callback:v=>'$'+v.toFixed(2)},grid:{color:'#f4f4f5'}},y1:{position:'right',ticks:{callback:v=>v.toFixed(1)+'%'},grid:{display:false}}}}});
+  },50);
+}});
+
+/* 12 — Market Index */
+SCREENS.push({title:'Market Index', render: el => {
+  const labels = BLS_PPI.map(b=>b.m.slice(2));
+  const blsV = BLS_PPI.map(b=>b.v);
+  const fredV = FRED_TRUCK.map(f=>f.v);
+  // our paid rate per mile, anchored off the BLS trend with offset
+  const paidRPM = blsV.map((v,i)=> +(2.05 + (v-137.4)*0.018 + (rnd()-0.5)*0.04).toFixed(3));
+  const last = blsV[blsV.length-1], first = blsV[0];
+  const lastP = paidRPM[paidRPM.length-1], firstP = paidRPM[0];
+  el.innerHTML = `
+    <div class="between" style="margin-bottom:6px;"><h1 class="h1">Market Index</h1><span class="pill pill-live">BLS · FRED · cached</span></div>
+    <p class="sub">Public freight indexes vs our average paid rate per mile. Below the market line is a win. Above is exposure.</p>
+    <div class="grid g3" style="margin-bottom:18px;">
+      <div class="card"><span class="lab">BLS PPI · trucking</span><div class="num-xl mono">${last.toFixed(1)}</div><div class="${last>first?'delta-up':'delta-dn'}">${pct((last-first)/first*100,1)} 12-mo</div></div>
+      <div class="card"><span class="lab">Our avg paid $/mile</span><div class="num-xl mono">$${lastP.toFixed(2)}</div><div class="${lastP>firstP?'delta-up':'delta-dn'}">${pct((lastP-firstP)/firstP*100,1)} 12-mo</div></div>
+      <div class="card"><span class="lab">vs market</span><div class="num-xl mono delta-dn">-1.3%</div><div class="lab" style="margin-top:4px;">paid below trend</div></div>
+    </div>
+    <div class="card card-lg"><div class="stack-h">Indexes vs our paid rate</div><canvas id="mkt" height="120"></canvas><div class="source-tag" style="margin-top:10px;">Sources ·  <b>BLS Public Data API</b> (PCU484 trucking PPI) ·  <b>FRED</b> (long-distance trucking PPI) · cached, live keys wire later</div></div>
+  `;
+  setTimeout(()=>{
+    new Chart(el.querySelector('#mkt'),{data:{labels,datasets:[
+      {type:'line',label:'BLS PPI · trucking',data:blsV,borderColor:'#09090b',backgroundColor:'#09090b',tension:0.35,yAxisID:'y',borderWidth:2.5,pointRadius:3},
+      {type:'line',label:'FRED long-haul PPI',data:fredV,borderColor:'#71717a',backgroundColor:'#71717a',tension:0.35,yAxisID:'y',borderWidth:2,pointRadius:2,borderDash:[5,5]},
+      {type:'line',label:'Our paid $/mi',data:paidRPM,borderColor:'#ea580c',backgroundColor:'#ea580c',tension:0.35,yAxisID:'y1',borderWidth:2.5,pointRadius:3}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{position:'left',title:{display:false},grid:{color:'#f4f4f5'}},y1:{position:'right',ticks:{callback:v=>'$'+v.toFixed(2)},grid:{display:false}}}}});
+  },50);
+}});
+
+/* ---------- carousel ---------- */
+const car = $('car'), dotsEl = $('dots');
+SCREENS.forEach((s,i)=>{
+  const div=document.createElement('div');
+  div.className='scr'; div.id='scr'+i;
+  car.appendChild(div);
+  s.render(div);
+  const dot=document.createElement('span'); dot.className='dot'+(i===0?' on':''); dot.dataset.i=i; dotsEl.appendChild(dot);
+  dot.addEventListener('click',()=>go(i));
+});
+function current(){return Math.round(car.scrollLeft/window.innerWidth);}
+function go(i){i=Math.max(0,Math.min(SCREENS.length-1,i));car.scrollTo({left:i*window.innerWidth,behavior:'smooth'});}
+function paint(){
+  const c=current();
+  $('crumb').textContent=SCREENS[c].title;
+  $('pageNum').textContent=(c+1)+' / '+SCREENS.length;
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===c));
+  $('prev').disabled = c===0;
+  $('next').disabled = c===SCREENS.length-1;
+}
+car.addEventListener('scroll',()=>{requestAnimationFrame(paint);});
+$('prev').addEventListener('click',()=>go(current()-1));
+$('next').addEventListener('click',()=>go(current()+1));
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')go(current()-1);
+  else if(e.key==='ArrowRight')go(current()+1);
+});
+window.addEventListener('resize',()=>{const c=current();car.scrollTo({left:c*window.innerWidth,behavior:'instant'});paint();});
+paint();
+</script>
+</body>
+</html>
