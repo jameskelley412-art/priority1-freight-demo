@@ -77,7 +77,8 @@
   .stack-lg > *+*{margin-top:18px}
   .div{height:1px;background:var(--line);margin:14px 0}
   .divide > *+*{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:500;color:var(--ink);background:#18181b;cursor:pointer;user-select:none;transition:all .12s}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:500;color:var(--ink);background:#18181b;cursor:pointer;user-select:none;transition:all .12s;will-change:transform}
+  .chip:active{transform:scale(0.96)}
   .chip:hover{border-color:#52525b}
   .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
   .chip .x{color:var(--accent);font-weight:700}
