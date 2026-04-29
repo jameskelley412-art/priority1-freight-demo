@@ -796,7 +796,7 @@ SCREENS.push({title:'Carrier Power', render: el => {
     </div>
     <div class="stack">
       ${stats.map(s=>{
-        const lever=(s.vsMkt>5||s.otp<90||s.csa.unsafe>50)?'press':(s.vsMkt<-5&&s.otp>92)?'hold':'monitor';
+        const lever=(s.vsMkt>5||s.otp<90||s.csa.unsafe>55)?'press':(s.vsMkt<-3&&s.otp>92&&s.csa.unsafe<35)?'hold':'monitor';
         const sharePct=(s.spend/totalSpend*100).toFixed(0);
         return `
         <div class="card carrier-row">
