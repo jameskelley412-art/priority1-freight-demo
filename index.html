@@ -505,7 +505,11 @@ SCREENS.push({title:'Network Map', render: el => {
     proj.rotate([95,0,0]);
     const path=d3.geoPath(proj);
     /* ocean (sphere) + graticule */
-    svg.append('path').datum({type:'Sphere'}).attr('d',path).attr('fill','#0d0d10').attr('stroke','#27272a').attr('stroke-width',0.6);
+    const defs=svg.append('defs');
+    const oceanGrad=defs.append('radialGradient').attr('id','oceanGrad').attr('cx','50%').attr('cy','45%').attr('r','75%');
+    oceanGrad.append('stop').attr('offset','0%').attr('stop-color','#10131a');
+    oceanGrad.append('stop').attr('offset','100%').attr('stop-color','#08080a');
+    svg.append('path').datum({type:'Sphere'}).attr('d',path).attr('fill','url(#oceanGrad)').attr('stroke','#27272a').attr('stroke-width',0.6);
     const grat=d3.geoGraticule().step([20,20]);
     svg.append('path').datum(grat()).attr('d',path).attr('fill','none').attr('stroke','#1a1a1d').attr('stroke-width',0.4);
     Promise.all([
