@@ -100,7 +100,8 @@
   tr.row-hover:hover td{background:#18181b}
   tr.row-hover:hover td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
   .bar{height:8px;border-radius:999px;background:#27272a;overflow:hidden}
-  .bar > span{display:block;height:100%;border-radius:999px}
+  .bar > span{display:block;height:100%;border-radius:999px;animation:barGrow .9s cubic-bezier(.2,.8,.2,1)}
+  @keyframes barGrow{from{transform:translateX(-100%)}to{transform:translateX(0)}}
   .legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
   .stack-h{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
   .stack-h::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}
