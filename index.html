@@ -856,7 +856,7 @@ SCREENS.push({title:'Exception Queue', render: el => {
   rows.push({s:SHIPMENTS[14],kind:'claim',sev:'bad',msg:'Damage claim filed · partial pallet',act:'Open claim'});
   rows.push({s:SHIPMENTS[2],kind:'fmcsa',sev:'warn',msg:'Carrier CSA unsafe-driving > 60th percentile',act:'Review carrier'});
   rows.push({s:SHIPMENTS[4],kind:'contract',sev:'warn',msg:'Booked off-contract · ad-hoc rate',act:'Verify rationale'});
-  rows.sort((a,b)=>(a.sev==='bad'?-1:1));
+  rows.sort((a,b)=>{if(a.sev===b.sev)return 0;return a.sev==='bad'?-1:1;});
   const counts={late:rows.filter(r=>r.kind==='late').length,billing:rows.filter(r=>r.kind==='billing').length,route:rows.filter(r=>r.kind==='route').length,claim:rows.filter(r=>r.kind==='claim').length};
   el.innerHTML=`
     <div class="between" style="margin-bottom:6px;"><h1 class="h1">Exception Queue</h1><span class="pill pill-bad">${rows.length} need action</span></div>
