@@ -456,7 +456,8 @@ SCREENS.push({title:'Network Map', render: el => {
     <div class="between" style="margin-bottom:6px;"><h1 class="h1">Network Map</h1><span class="pill pill-live">${TRUCKS.length} trucks · ${SHIPS.length} ships</span></div>
     <p class="sub">Every active shipment, road and ocean, on one canvas. Margin per truck, FBX rate per ship, port wait times live.</p>
     <div class="map-grid">
-      <div class="card card-lg" style="padding:14px;">
+      <div class="card card-lg" style="padding:14px;position:relative;">
+        <button id="mapReset" class="btn btn-out" style="position:absolute;top:24px;right:24px;z-index:5;font-size:11px;padding:6px 11px;">Reset view</button>
         <div id="mapWrap" style="position:relative;width:100%;height:74vh;min-height:480px;cursor:grab;"></div>
         <div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px;">
           <div class="row" style="gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;">
@@ -507,7 +508,10 @@ SCREENS.push({title:'Network Map', render: el => {
     wrap.innerHTML='';
     const _svg=d3.select(wrap).append('svg').attr('width',W).attr('height',H).style('display','block');
     const svg=_svg.append('g');
-    _svg.call(d3.zoom().scaleExtent([0.8,8]).on('zoom',e=>svg.attr('transform',e.transform)));
+    const zoomBeh=d3.zoom().scaleExtent([0.8,8]).on('zoom',e=>svg.attr('transform',e.transform));
+    _svg.call(zoomBeh);
+    const resetBtn=document.getElementById('mapReset');
+    if(resetBtn) resetBtn.onclick=()=>_svg.transition().duration(500).call(zoomBeh.transform,d3.zoomIdentity);
     const proj=d3.geoEqualEarth().rotate([95,0,0]);
     proj.fitSize([W-20,H-30],{type:'Sphere'});
     proj.rotate([95,0,0]);
