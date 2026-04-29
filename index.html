@@ -552,7 +552,7 @@ SCREENS.push({title:'Network Map', render: el => {
       const truckG=svg.append('g'); const truckLabelG=svg.append('g');
       TRUCKS.forEach(t=>{
         t.tEl=truckG.append('g');
-        t.tEl.append('rect').attr('width',12).attr('height',8).attr('x',-6).attr('y',-4).attr('rx',2).attr('fill',t.flag?'#f87171':'#ea580c').attr('stroke','#0a0a0a').attr('stroke-width',1.2);
+        t.tEl.append('rect').attr('width',12).attr('height',8).attr('x',-6).attr('y',-4).attr('rx',2).attr('fill',t.flag?'#f87171':'#ea580c').attr('stroke','#0a0a0a').attr('stroke-width',1.2).style('filter',t.flag?'drop-shadow(0 0 4px rgba(248,113,113,0.7))':'drop-shadow(0 0 4px rgba(234,88,12,0.55))');
         t.lEl=truckLabelG.append('g').style('pointer-events','none');
         const bg=t.lEl.append('rect').attr('rx',4).attr('fill','#09090b').attr('stroke','#3f3f46').attr('stroke-width',0.6);
         const tt1=t.lEl.append('text').attr('font-size',9).attr('font-weight',700).attr('fill','#fafafa').attr('font-family','JetBrains Mono');
@@ -569,7 +569,7 @@ SCREENS.push({title:'Network Map', render: el => {
       const shipG=svg.append('g'); const shipLabelG=svg.append('g');
       SHIPS.forEach(s=>{
         s.tEl=shipG.append('g');
-        s.tEl.append('rect').attr('width',18).attr('height',7).attr('x',-9).attr('y',-3.5).attr('rx',1.5).attr('fill','#22d3ee').attr('stroke','#0a0a0a').attr('stroke-width',1);
+        s.tEl.append('rect').attr('width',18).attr('height',7).attr('x',-9).attr('y',-3.5).attr('rx',1.5).attr('fill','#22d3ee').attr('stroke','#0a0a0a').attr('stroke-width',1).style('filter','drop-shadow(0 0 5px rgba(34,211,238,0.65))');
         s.lEl=shipLabelG.append('g').style('pointer-events','none');
         const bg=s.lEl.append('rect').attr('rx',4).attr('fill','#09090b').attr('stroke','#22d3ee').attr('stroke-width',0.6);
         const tt1=s.lEl.append('text').attr('font-size',9).attr('font-weight',700).attr('fill','#fafafa').attr('font-family','JetBrains Mono');
