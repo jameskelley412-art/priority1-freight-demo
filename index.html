@@ -392,7 +392,7 @@ SCREENS.push({title:'Command Center', render: el => {
     const s=recent[idx % recent.length]; idx++;
     const node=document.createElement('div');
     node.className='alert-row arriving';
-    node.style.cssText='padding:10px 12px;background:#18181b;border-color:var(--line);';
+    node.style.cssText=`padding:10px 12px;background:#18181b;border-color:var(--line);border-left:3px solid ${s.carrier.color};`;
     node.innerHTML=`<div style="flex:1;min-width:0;">
       <div class="row" style="gap:8px;"><span class="pill pill-soft mono">${s.id}</span><span style="font-size:12.5px;font-weight:600;">${s.lane.o.split(',')[0]} → ${s.lane.d.split(',')[0]}</span></div>
       <div class="lab mono" style="margin-top:3px;">${s.carrier.name} · ${s.weight} lbs · class ${s.cls}</div>
