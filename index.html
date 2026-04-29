@@ -32,7 +32,9 @@
   .dot.on{width:22px;background:var(--accent);box-shadow:0 0 6px rgba(251,146,60,.5)}
   .car{display:flex;flex-direction:row;width:100vw;height:100vh;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
   .car::-webkit-scrollbar{display:none}
-  .scr{flex:0 0 100vw;width:100vw;height:100vh;scroll-snap-align:start;scroll-snap-stop:always;padding:74px 20px 56px;overflow-y:auto;overflow-x:hidden}
+  .scr{flex:0 0 100vw;width:100vw;height:100vh;scroll-snap-align:start;scroll-snap-stop:always;padding:74px 20px 56px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#3f3f46 transparent}
+  .scr::-webkit-scrollbar{width:6px}
+  .scr::-webkit-scrollbar-thumb{background:#3f3f46;border-radius:3px}
   @media(min-width:768px){.scr{padding:88px 56px 72px}}
   .arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:40;width:42px;height:62px;border-radius:14px;background:rgba(24,24,27,.85);backdrop-filter:blur(8px);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;user-select:none;box-shadow:0 6px 20px rgba(0,0,0,.5);transition:all .15s;color:var(--ink)}
   .arrow:hover{background:var(--accent);color:#0a0a0a;border-color:var(--accent);box-shadow:0 6px 24px rgba(251,146,60,.35)}
