@@ -913,7 +913,7 @@ SCREENS.push({title:'Quote', render: el => {
     return {cards,cuft,density,suggestedClass};
   }
   function paint(){
-    const latency=320+rndInt(20,80);
+    const latency=180+rndInt(40,140);
     el.querySelector('#latBadge').textContent=`POST /v2/rates · ${latency}ms`;
     const r=rates();
     const cards=r.cards;
